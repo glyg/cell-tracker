@@ -72,3 +72,4 @@ def guess_preprocess(metadata, max_value, channel=0):
             def preprocess(stack):
                 return stack / divider
     return preprocess
+

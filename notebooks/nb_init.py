@@ -2,6 +2,11 @@ import sys, os
 sys.path.append('..')
 sys.path.append('../../scikit-tracker')
 
+# Shut up warnings!
+import warnings
+warnings.filterwarnings("ignore")
+
+
 import numpy as np
 
 import matplotlib
@@ -23,17 +28,11 @@ from skimage import exposure
 from scipy.interpolate import splrep, splev
 from sklearn.decomposition import PCA
 
-from sktracker.io import StackIO
+from sktracker.io import StackIO, ObjectsIO
 from sktracker.io.utils import load_img_list 
 from sktracker.detection import nuclei_detector
-
+from sktracker.trajectories import Trajectories, draw
 import cell_tracker as ct
-
-
-# Shut up warnings!
-import warnings
-warnings.filterwarnings("ignore")
-
 
 
 def get_stacks(default_path='.', metadata=None):
