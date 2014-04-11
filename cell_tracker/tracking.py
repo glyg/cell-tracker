@@ -3,6 +3,8 @@ from sktracker.tracker.solver import GapCloseSolver
 from sktracker.trajectories import Trajectories
 
 
+
+
 def track_cells(positions, max_speed, cut_penalty=2.,
                 max_gap=4, fragment=1, coords=['x', 'y', 'z']):
     '''Runs the tracking for the given positions. Returns the tracked positions

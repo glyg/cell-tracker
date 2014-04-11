@@ -43,3 +43,6 @@ doc/source/api
 *.*~
 *.orig
 *.emacs*
+
+# IPython
+.ipynb_checkpoints
