@@ -19,6 +19,8 @@ import pandas as pd
 import json
 from PyQt4 import QtGui
 
+from scipy import ndimage
+
 # Various algorithms from other libraries
 
 from mpl_toolkits.mplot3d import Axes3D
@@ -38,8 +40,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-
-def get_stacks(default_path='.', metadata=None):
+def get_cluster(default_path='.', metadata=None):
     if metadata is None:
         metadata = ct.default_metadata
 
@@ -47,17 +48,17 @@ def get_stacks(default_path='.', metadata=None):
     if data_path is None:
         return
     image_path_list = load_img_list(data_path)
-    stack_io = StackIO(image_path_list=image_path_list)
-    im0 = stack_io.get_tif().asarray()
+    stackio = StackIO(image_path_list=image_path_list)
+    im0 = stackio.get_tif().asarray()
 
     correct_metadata = {'SizeT': len(image_path_list),
                         'Shape': ((len(image_path_list),)
                                   + im0.shape)}
     if len(im0.shape) == 4:
         correct_metadata['SizeC'] = im0.shape[0]
-
-    stack_io.metadata.update(correct_metadata)
-    return stack_io
+    stackio.metadata.update(correct_metadata)
+    cellcluster = ct.CellCluster(stackio=stackio)
+    return cellcluster
 
 def get_dataset(default='.'):
     app = QtGui.QApplication.instance()
@@ -69,11 +70,10 @@ def get_dataset(default='.'):
         return None, None
 
     data_path = str(out)
-    splitted = data_path.split('/')
+    splitted = data_path.split(os.path.sep)
     name = '{}_{}'.format(splitted[-2], splitted[-1])
 
     print('Choosen data path: %s' % data_path)
-    print('Choosen name: %s' % name)
     return data_path, name
 
 

@@ -6,17 +6,9 @@ from sklearn.decomposition import PCA
 from scipy.optimize import leastsq
 
 from sktracker.trajectories import Trajectories
+from sktracker.io import ObjectsIO, StackIO
+
 from . import ELLIPSIS_CUTOFFS
-
-
-
-class Cells:
-    """
-    Container class
-    """
-    def __init__(self, trajs):
-        self.trajs = trajs
-
 
 class Ellipses():
 

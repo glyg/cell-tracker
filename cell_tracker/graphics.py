@@ -20,10 +20,45 @@ from sktracker.trajectories import draw
 
 import os
 
-def show_overlayed(z_stack, positions,
-                   xy_size, z_size,
-                   xy_ROI=None,
-                   ax=None, **kwargs):
+def show_histogram(image, depth, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    bins = 2**depth
+    h = ax.hist(image.flatten(),
+                bins=bins-2, log=True)
+    return h
+
+def polar_histogram(cellcluster, ax=None, **kwargs):
+    if ax is None:
+        fig1, ax = plt.subplots(1, 1,
+                                subplot_kw={'projection':'polar'},
+                                figsize=(6,6))
+
+
+    radii = cellcluster.theta_bin_count / np.float(cellcluster.theta_bin_count.sum())
+    width = (cellcluster.theta_bins[1] - cellcluster.theta_bins[0])
+    bars = ax.bar(cellcluster.theta_bins[:-1], radii,
+                  width=width, bottom=0.0, **kwargs)
+    #ax.set_rgrids([0.05, 0.1, 0.15,], angle=90)
+    #ax.set_rmax(0.18)
+    ax.set_title(cellcluster.metadata['FileName'])
+    return ax
+
+def show_overlayed(cellcluster, index, xy_ROI=None, ax=None, **kwargs):
+    '''
+    Show the stack number `index` with the detected positions overlayed
+    '''
+    z_stack = cellcluster.stackio.get_tif_from_list(index).asarray()
+    ax = _show_overlayed(z_stack, cellcluster.trajs.loc[index],
+                         cellcluster.metadata['PhysicalSizeX'],
+                         cellcluster.metadata['PhysicalSizeZ'],
+                         xy_ROI=xy_ROI, ax=ax, **kwargs)
+
+
+def _show_overlayed(z_stack, positions,
+                    xy_size, z_size,
+                    xy_ROI=None,
+                    ax=None, **kwargs):
     if ax is None:
         fig, ax = plt.subplots(figsize=(6, 6))
     elif ax is not None:
