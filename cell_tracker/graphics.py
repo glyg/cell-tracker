@@ -19,6 +19,7 @@ from scipy.ndimage import center_of_mass
 from sktracker.trajectories import draw
 
 import os
+from .analysis import Ellipses
 
 def show_histogram(image, depth, ax=None):
     if ax is None:
@@ -27,6 +28,9 @@ def show_histogram(image, depth, ax=None):
     h = ax.hist(image.flatten(),
                 bins=bins-2, log=True)
     return h
+
+
+
 
 def polar_histogram(cellcluster, ax=None, **kwargs):
     if ax is None:
@@ -315,45 +319,44 @@ def make_movie(positions, iter_stacks, xy_size,
         warnings.warn("""Movie couldn't be compiled""")
 
 
-def plot_rotation_events(tracker, ax=None, show_segments=False, **kwargs):
-
+def plot_rotation_events(cluster, ax=None,
+                         show_segments=False, **kwargs):
     if ax is None:
         fig, ax = plt.subplots()
 
+    colors = cluster.trajs.get_colors()
     if show_segments:
-        n_labels = tracker.labels.size
+        n_labels = cluster.trajs.labels.size
 
-        for label in tracker.labels:
-            sub_dr = tracker.detected_rotations.loc[label]
-            color = tracker.label_colors[label]
-            ts = sub_dr.columns.values
-            ts *= tracker.metadata['t_size']
+        for label in cluster.trajs.labels:
+            sub_dr = cluster.detected_rotations.loc[label]
+            color = colors[label]
+            ts = sub_dr.index.values
+            ts *= cluster.metadata['TimeIncrement']
             shift = (label - n_labels/2) / 100.
             ax.step(ts, sub_dr.values + shift, '-', c=color, lw=2, alpha=0.7)
     n_detected =  pd.Series(
-        np.ones_like(tracker.detected_rotations),
-        index=tracker.detected_rotations.index).sum(level='t').astype(np.float)
-    total_rot = tracker.detected_rotations.sum(level='t') / n_detected
+        np.ones_like(cluster.detected_rotations),
+        index=cluster.detected_rotations.index).sum(level='t_stamp').astype(np.float)
+    total_rot = cluster.detected_rotations.sum(level='t_stamp') / n_detected
 
-    ts = total_rot.index.get_level_values('t').values.copy()
-    ts *= tracker.metadata['t_size']
+    ts = total_rot.index.get_level_values('t_stamp').values.copy()
+    ts *= cluster.metadata['TimeIncrement']
     ax.step(ts, total_rot.values, '-', c='k', lw=2)
 
     ax.set_xlabel('Elapsed time (min)')
     ax.set_ylabel('Rotation events')
     ax.set_ylim(-0.1, 1.1)
     plt.draw()
-    # ax.set_xlim(0, 180)
-    # ax.set_ylim(0, 100)
-    ax.set_title(tracker.name)
+    ax.set_title(cluster.metadata['FileName'])
     return ax, total_rot, n_detected
 
 
-def show_4panel_ellipses(tracker, label, sizes,  cutoffs,
+def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
                          savefile=None, axes=None, ax_3d=None):
-    colors = tracker.label_colors
-    segment = tracker.get_segment(label)
-    scatter_kw = {'c':segment.index.values.astype(np.float),
+    colors = cluster.trajs.get_colors()
+    segment = cluster.trajs.get_segments()[label]
+    scatter_kw = {'c':segment.t.astype(np.float),
                   'cmap':'spectral',
                   's':40,
                   'alpha':0.8,
@@ -362,14 +365,13 @@ def show_4panel_ellipses(tracker, label, sizes,  cutoffs,
                'ls':'-',
                'alpha':0.8, 'lw':0.75}
     coords=['x_c', 'y_c', 'z_c']
-    axes, ax_3d = show_4pannels(tracker, label,
-                                axes=axes, ax_3d=ax_3d,
-                                scatter_kw=scatter_kw,
-                                line_kw=line_kw,
-                                coords=coords,
-                                smth=0, sampling=0)
+    axes, ax_3d = draw.show_4panels(cluster.trajs, label,
+                                    axes=axes, ax_3d=ax_3d,
+                                    scatter_kw=scatter_kw,
+                                    line_kw=line_kw,
+                                    coords=coords)
     for size in sizes:
-        axes, ax_3d = show_ellipses(tracker, label, size,
+        axes, ax_3d = show_ellipses(cluster, label, size,
                                     cutoffs=cutoffs,
                                     coords=coords,
                                     axes=axes, ax_3d=ax_3d,
@@ -384,7 +386,7 @@ def show_4panel_ellipses(tracker, label, sizes,  cutoffs,
     return axes, ax_3d
 
 
-def show_ellipses(tracker, label, size,
+def show_ellipses(cluster, label, size,
                   cutoffs,
                   coords=['x_c', 'y_c', 'z_c'],
                   axes=None, ax_3d=None,
@@ -401,9 +403,9 @@ def show_ellipses(tracker, label, size,
         ax_3d = fig.add_subplot(224, projection='3d')
     try:
         ellipses = Ellipses(size=size,
-                            segment=tracker.interpolated.xs(label,
+                            segment=cluster.interpolated.xs(label,
                                                             level='label'),
-                            data=tracker.ellipses[size].xs(label,
+                            data=cluster.ellipses[size].xs(label,
                                                            level='label'),
                             coords=list(coords))
     except KeyError:

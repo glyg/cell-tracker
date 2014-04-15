@@ -64,7 +64,7 @@ class Ellipses():
             lstsq, components = fit_arc_ellipse(self.segment,
                                                 start, stop,
                                                 self.coords)
-            if leastsq is None:
+            if lstsq is None:
                 continue
             params = lstsq[0]
             midle = self.segment.index[i + self.size//2]
@@ -205,7 +205,7 @@ def arc_ellipse(t, params):
 
 def arc_residuals(params, data):
 
-    times = np.asarray(data.index.get_level_values('t_stamps'), dtype=np.float)
+    times = np.asarray(data.index.get_level_values('t_stamp'), dtype=np.float)
     fit_x, fit_y = arc_ellipse(times, params)
     res_x = fit_x - data['x'].values
     res_y = fit_y - data['y'].values

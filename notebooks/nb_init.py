@@ -38,26 +38,44 @@ import cell_tracker as ct
 
 import warnings
 warnings.filterwarnings("ignore")
+import logging
+log = logging.getLogger(__name__)
 
 
 def get_cluster(default_path='.', metadata=None):
     if metadata is None:
         metadata = ct.default_metadata
 
+
     data_path, name = get_dataset(default_path)
     if data_path is None:
         return
-    image_path_list = load_img_list(data_path)
-    stackio = StackIO(image_path_list=image_path_list)
-    im0 = stackio.get_tif().asarray()
 
-    correct_metadata = {'SizeT': len(image_path_list),
-                        'Shape': ((len(image_path_list),)
-                                  + im0.shape)}
-    if len(im0.shape) == 4:
-        correct_metadata['SizeC'] = im0.shape[0]
-    stackio.metadata.update(correct_metadata)
-    cellcluster = ct.CellCluster(stackio=stackio)
+    stores = [h5file for h5file in os.listdir(data_path)
+              if h5file.endswith('.h5')]
+    if len(stores) == 0:
+        objectsio = None
+    elif len(stores) > 1:
+        log.info('''Multiple '.h5' found, loading metadata from images''')
+        objectsio = None
+    else:
+        store_path = os.path.join(data_path, stores[0])
+        objectsio = ObjectsIO(store_path=store_path)
+
+    image_path_list = load_img_list(data_path)
+    if objectsio is not None:
+        stackio = StackIO(image_path_list=image_path_list, metadata=objectsio.metadata)
+    else:
+        stackio = StackIO(image_path_list=image_path_list)
+        im0 = stackio.get_tif().asarray()
+        correct_metadata = {'SizeT': len(image_path_list),
+                            'Shape': ((len(image_path_list),)
+                                      + im0.shape)}
+        if len(im0.shape) == 4:
+            correct_metadata['SizeC'] = im0.shape[0]
+            stackio.metadata.update(correct_metadata)
+
+    cellcluster = ct.CellCluster(objectsio=objectsio, stackio=stackio )
     return cellcluster
 
 def get_dataset(default='.'):

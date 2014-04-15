@@ -24,10 +24,12 @@ class CellCluster:
     def __init__(self, stackio=None, objectsio=None):
         if stackio is not None:
             self.stackio = stackio
-            self.oio = ObjectsIO.from_stackio(stackio)
-        elif objectsio is not None:
+            if objectsio is None:
+                self.oio = ObjectsIO.from_stackio(stackio)
+        if objectsio is not None:
             self.oio = objectsio
-            self.stackio = StackIO.from_objectio(objectsio)
+            if stackio is None:
+                self.stackio = StackIO.from_objectio(objectsio)
         try:
             self.trajs = Trajectories(self.oio['trajs'])
             log.info('Found trajectories in {}'.format(self.oio.store_path))
@@ -38,15 +40,19 @@ class CellCluster:
     def metadata(self):
         return self.oio.metadata
 
-    def get_center(self, coords=('x', 'y', 'z'), smooth=0):
+    def get_center(self, coords=['x', 'y', 'z'], smooth=0):
         """
         Computes `self.center`, the average positions (time stamp wise)
+        adds columns with the passed coords appended with '_c' with the center
+        positions
         """
         if not smooth:
             self.center = self.trajs[coords].mean(axis=0, level='t_stamp')
         else:
             interpolated = self.trajs.time_interpolate(coords=coords, s=smooth)
-            self.center =  interpolated.mean(axis=0, level='t_stamp')
+            self.center =  interpolated.mean(axis=0, level='stamp')
+        new_cols = [c+'_c' for c in coords]
+        self.trajs[new_cols] = self.reindexed_center()
 
     def detect_cells(self, preprocess, **kwargs):
         '''
@@ -63,11 +69,11 @@ class CellCluster:
         self.oio['trajs'] = self.trajs
 
     def track_cells(self, **kwargs):
+
         self.oio['trajs.back'] = self.trajs
         self.trajs = track_cells(self.trajs, **kwargs)
         self.oio['trajs'] = self.trajs
 
-    @property
     def reindexed_center(self):
         return self.center.reindex(self.trajs.index, level='t_stamp')
 
@@ -103,11 +109,12 @@ class CellCluster:
 
         self.trajs['dtheta'] = 0.
         grouped = self.trajs.groupby(level='label')
-        self.trajs = grouped.apply(continuous_theta)
-
-        self.trajs = self.trajs.swaplevel('label', 't_stamp')
-        self.trajs = self.trajs.sortlevel('t_stamp')
-        self.trajs = self.trajs.sortlevel('label')
+        tmp_trajs = grouped.apply(continuous_theta)
+        tmp_trajs.index.set_names(['label', 't_stamp'],
+                                   inplace=True)
+        tmp_trajs = tmp_trajs.swaplevel('label', 't_stamp')
+        tmp_trajs = tmp_trajs.sortlevel('t_stamp')
+        self.trajs = Trajectories(tmp_trajs)
         self.theta_bin_count, self.theta_bins = np.histogram(
             self.trajs['theta'].dropna().astype(np.float),
             bins=np.linspace(-4*np.pi, 4*np.pi, 4 * 12 + 1))
@@ -116,10 +123,14 @@ class CellCluster:
 
     def compute_ellipticity(self, size=8,
                             cutoffs=ELLIPSIS_CUTOFFS,
-                            coords=['x_c', 'y_c', 'z_c']):
+                            coords=['x_c', 'y_c', 'z_c'], smooth=0):
 
         if not hasattr(self, 'ellipses'):
             self.ellipses = {}
+        if not hasattr(self, 'interpolated'):
+            self.interpolated = self.trajs.time_interpolate(coords=coords,
+                                                            s=smooth)
+
         grouped = self.interpolated.groupby(level='label')
         self.ellipses[size] = grouped.apply(evaluate_ellipticity,
                                             size=size, cutoffs=cutoffs,
@@ -129,7 +140,6 @@ class CellCluster:
     def detect_rotations(self, cutoffs):
 
         for size in self.ellipses.keys():
-
             ellipsis_df = self.ellipses[size]
             ellipsis = Ellipses(size, data=ellipsis_df)
             ellipsis.data['good'] =  np.zeros(ellipsis.data.shape[0])
@@ -152,16 +162,16 @@ class CellCluster:
 def get_segment_rotations(segment, data):
 
     label = segment.index.get_level_values('label').unique()[0]
-    t0 = segment.index.get_level_values('t')[0]
-    t1 = segment.index.get_level_values('t')[-1]
+    t0 = segment.index.get_level_values('t_stamp')[0]
+    t1 = segment.index.get_level_values('t_stamp')[-1]
 
     detected_rotations = pd.Series(data=0,
-                                   index=pd.Index(np.arange(t0, t1), name='t'),
+                                   index=pd.Index(np.arange(t0, t1), name='t_stamp'),
                                    name='detected_rotations')
     try:
         sub_data = data.xs(label, level='label')
-    except KeyError:
-        detected_rotations.loc[:] = np.nan
+    except IndexError:
+        detected_rotations[:] = np.nan
         return detected_rotations
     sub_time = sub_data.index.values
     sizes = data['size'].unique()
