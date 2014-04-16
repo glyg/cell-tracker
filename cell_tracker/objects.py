@@ -29,7 +29,7 @@ class CellCluster:
         if objectsio is not None:
             self.oio = objectsio
             if stackio is None:
-                self.stackio = StackIO.from_objectio(objectsio)
+                self.stackio = StackIO.from_objectsio(objectsio)
         try:
             self.trajs = Trajectories(self.oio['trajs'])
             log.info('Found trajectories in {}'.format(self.oio.store_path))
