@@ -1,3 +1,9 @@
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
+
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
@@ -22,6 +28,16 @@ class CellCluster:
     The container class for cell cluster migration analysis
     '''
     def __init__(self, stackio=None, objectsio=None):
+        '''
+
+        Parameters
+        ----------
+
+        stackio : a :class:`sktracker.StackIO` instance
+
+        objectsio : a :class:`sktracker.ObjectsIO` instance
+
+        '''
         if stackio is not None:
             self.stackio = stackio
             if objectsio is None:
@@ -40,11 +56,32 @@ class CellCluster:
     def metadata(self):
         return self.oio.metadata
 
-    def get_center(self, coords=['x', 'y', 'z'], smooth=0):
-        """
-        Computes `self.center`, the average positions (time stamp wise)
-        adds columns with the passed coords appended with '_c' with the center
-        positions
+    def get_center(self, coords=['x', 'y', 'z'], smooth=0, append=True):
+        """Computes `self.center`, the average positions (time stamp wise).
+
+        If `append` is True, appends columns named after the passed
+        coordinates suffixed with '_c', containing the center
+        positions.
+
+        Parameters
+        ----------
+
+        coords : list of str, default `['x', 'y', 'z']`
+            The coordinates on which to compute the center positions
+
+        smooth : float, default 0.
+            A smoothing factor. If non zero, the argument is passed
+            to the `time_interpolate` method of `self.trajs`
+
+        append: bool, default True
+            If True, creates columns in `self.trajs` with the coordinates names
+            suffixed with '_c' with the repeated  center postion
+
+        See Also
+        --------
+
+        sktracker.Trajectories.time_interpolate
+
         """
         if not smooth:
             self.center = self.trajs[coords].mean(axis=0, level='t_stamp')
@@ -52,7 +89,8 @@ class CellCluster:
             interpolated = self.trajs.time_interpolate(coords=coords, s=smooth)
             self.center =  interpolated.mean(axis=0, level='stamp')
         new_cols = [c+'_c' for c in coords]
-        self.trajs[new_cols] = self.reindexed_center()
+        if append:
+            self.trajs[new_cols] = self.reindexed_center()
 
     def detect_cells(self, preprocess, **kwargs):
         '''

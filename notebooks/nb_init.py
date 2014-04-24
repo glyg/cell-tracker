@@ -1,3 +1,9 @@
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
+
 import sys, os
 sys.path.append('..')
 sys.path.append('../../scikit-tracker')
@@ -44,18 +50,51 @@ log = logging.getLogger(__name__)
 
 
 def get_from_excel(default_path='.'):
+    '''
+    This opens a file dialog allowing ot select an excel file containing
+    the tracked data, and returns a :class:`CellCluster` object.
+
+    Paramteters
+    -----------
+
+    default_path : str
+        the path where the file dialog opens
+
+    Returns
+    -------
+
+    cellcluster : a :class:`CellCluster` instance
+         the container class for the tracking
+
+    Notes
+    -----
+
+    The excel file should follow the structure of `excel_trajs_example.xlsx`
+    in the project's `data` directory
+    '''
+
+    ### Open the file dialog
     data_path, name = get_excel_file(default_path)
+
+    ### Read the data
     trajs = pd.read_excel(data_path, 0)
-    trajs.set_index(['t_stamp', 'label'], inplace=True)
+    trajs.set_index(['t_stamp', 'label'],
+                    inplace=True)
+    ### The Trajectories class is a subclass of
+    ### pandas DataFrame
     trajs = Trajectories(trajs)
+
     metadata = pd.read_excel(data_path, 1)
     metadata = {name: value for name, value
                 in zip(metadata['Name'], metadata['Value'])}
+
     store_path = ''.join(metadata['FileName'].split('.')[:-1]+['.h5'])
     metadata['FileName'] = os.path.join(
         os.path.dirname(data_path), metadata['FileName'])
     store_path = os.path.join(
         os.path.dirname(data_path), store_path)
+
+    ### The ObjectsIO class
     objectsio = ObjectsIO(metadata=metadata, store_path=store_path)
     cellcluster = ct.CellCluster(objectsio=objectsio)
     cellcluster.trajs = trajs
@@ -63,6 +102,23 @@ def get_from_excel(default_path='.'):
     return cellcluster
 
 def get_cluster(default_path='.', metadata=None):
+    '''
+    This opens a file dialog allowing to select the directory for
+    the tracked data, and returns a :class:`CellCluster` object.
+
+    Paramteters
+    -----------
+
+    default_path : str
+        the path where the file dialog opens
+
+    Returns
+    -------
+
+    cellcluster : a :class:`CellCluster` instance
+         the container class for the tracking
+    '''
+
     if metadata is None:
         metadata = ct.default_metadata
     data_path, name = get_dataset(default_path)
@@ -98,6 +154,9 @@ def get_cluster(default_path='.', metadata=None):
     return cellcluster
 
 def get_dataset(default='.'):
+    '''
+    Opens a directory select dialog
+    '''
     app = QtGui.QApplication.instance()
     if not app:
         app = QtGui.QApplication(sys.argv)
@@ -114,6 +173,9 @@ def get_dataset(default='.'):
     return data_path, name
 
 def get_excel_file(default='.'):
+    '''
+    Opens a file select dialog for xlsx files
+    '''
     app = QtGui.QApplication.instance()
     if not app:
         app = QtGui.QApplication(sys.argv)
