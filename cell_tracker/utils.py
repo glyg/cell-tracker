@@ -5,51 +5,20 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-
-import sys, os
-sys.path.append('..')
-sys.path.append('../../scikit-tracker')
-
-# Shut up warnings!
-import warnings
-warnings.filterwarnings("ignore")
-
-
-import numpy as np
-import pandas as pd
-
-import matplotlib
-matplotlib.rcParams['backend'] = 'Qt4Agg'
-matplotlib.rcParams['savefig.dpi'] = 90
-
-import matplotlib.pylab as plt
-
-import pandas as pd
-import json
 from PyQt4 import QtGui
 
-from scipy import ndimage
-
-# Various algorithms from other libraries
-
-from mpl_toolkits.mplot3d import Axes3D
-from skimage import img_as_float
-from skimage import exposure
-
-from scipy.interpolate import splrep, splev
-from sklearn.decomposition import PCA
-
-from sktracker.io import StackIO, ObjectsIO
-from sktracker.io.utils import load_img_list
-from sktracker.detection import nuclei_detector
-from sktracker.trajectories import Trajectories, draw
-import cell_tracker as ct
-
-import warnings
-warnings.filterwarnings("ignore")
+import sys, os
 import logging
 log = logging.getLogger(__name__)
 
+import pandas as pd
+
+from sktracker.io import StackIO, ObjectsIO
+from sktracker.io.utils import load_img_list
+from sktracker.trajectories import Trajectories
+
+from .. import CellCluster
+from .. import default_metadata
 
 def get_from_excel(default_path='.'):
     '''
@@ -98,7 +67,7 @@ def get_from_excel(default_path='.'):
 
     ### The ObjectsIO class
     objectsio = ObjectsIO(metadata=metadata, store_path=store_path)
-    cellcluster = ct.CellCluster(objectsio=objectsio)
+    cellcluster = CellCluster(objectsio=objectsio)
     cellcluster.trajs = trajs
     cellcluster.oio['trajs'] = trajs
     return cellcluster
@@ -122,7 +91,7 @@ def get_cluster(default_path='.', metadata=None):
     '''
 
     if metadata is None:
-        metadata = ct.default_metadata
+        metadata = default_metadata
     data_path, name = get_dataset(default_path)
     if data_path is None:
         return
@@ -152,7 +121,7 @@ def get_cluster(default_path='.', metadata=None):
             correct_metadata['SizeC'] = im0.shape[0]
             stackio.metadata.update(correct_metadata)
 
-    cellcluster = ct.CellCluster(objectsio=objectsio, stackio=stackio )
+    cellcluster = CellCluster(objectsio=objectsio, stackio=stackio )
     return cellcluster
 
 def get_dataset(default='.'):

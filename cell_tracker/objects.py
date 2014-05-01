@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
@@ -81,7 +83,6 @@ class CellCluster:
         --------
 
         sktracker.Trajectories.time_interpolate
-
         """
         if not smooth:
             self.center = self.trajs[coords].mean(axis=0, level='t_stamp')
