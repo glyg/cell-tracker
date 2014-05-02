@@ -161,6 +161,107 @@ def show_projected(z_stack, positions,
     return ax_xy
 
 
+def plot_rotation_events(cluster, ax=None,
+                         show_segments=False, **kwargs):
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    colors = cluster.trajs.get_colors()
+    if show_segments:
+        n_labels = cluster.trajs.labels.size
+
+        for label in cluster.trajs.labels:
+            sub_dr = cluster.detected_rotations.loc[label]
+            color = colors[label]
+            ts = sub_dr.index.values
+            ts *= cluster.metadata['TimeIncrement']
+            shift = (label - n_labels/2) / 100.
+            ax.step(ts, sub_dr.values + shift, '-', c=color, lw=2, alpha=0.7)
+    n_detected =  pd.Series(
+        np.ones_like(cluster.detected_rotations),
+        index=cluster.detected_rotations.index).sum(level='t_stamp').astype(np.float)
+    total_rot = cluster.detected_rotations.sum(level='t_stamp') / n_detected
+
+    ts = total_rot.index.get_level_values('t_stamp').values.copy()
+    ts *= cluster.metadata['TimeIncrement']
+    ax.step(ts, total_rot.values, '-', c='k', lw=2)
+
+    ax.set_xlabel('Elapsed time (min)')
+    ax.set_ylabel('Rotation events')
+    ax.set_ylim(-0.1, 1.1)
+    plt.draw()
+    ax.set_title(cluster.metadata['FileName'])
+    return ax, total_rot, n_detected
+
+
+def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
+                         savefile=None, axes=None, ax_3d=None):
+    colors = cluster.trajs.get_colors()
+    segment = cluster.trajs.get_segments()[label]
+    scatter_kw = {'c':segment.t.astype(np.float),
+                  'cmap':'spectral',
+                  's':40,
+                  'alpha':0.8,
+                  'edgecolors':'none'}
+    line_kw = {'c':'gray',#tracker.label_colors[label],
+               'ls':'-',
+               'alpha':0.8, 'lw':0.75}
+    coords=['x_c', 'y_c', 'z_c']
+    axes, ax_3d = draw.show_4panels(cluster.trajs, label,
+                                    axes=axes, ax_3d=ax_3d,
+                                    scatter_kw=scatter_kw,
+                                    line_kw=line_kw,
+                                    coords=coords)
+    for size in sizes:
+        axes, ax_3d = show_ellipses(cluster, label, size,
+                                    cutoffs=cutoffs,
+                                    coords=coords,
+                                    axes=axes, ax_3d=ax_3d,
+                                    alpha=0.5, lw=0.75, c='r')
+
+    for ax in axes.flatten():
+        ax.plot([0], [0], 'k+', ms=20)
+    ax_3d.plot([0], [0], [0], 'k+', ms=20)
+    if savefile is not None:
+        plt.savefig(savefile)
+
+    return axes, ax_3d
+
+
+def show_ellipses(cluster, label, size,
+                  cutoffs,
+                  coords=['x_c', 'y_c', 'z_c'],
+                  axes=None, ax_3d=None,
+                  **plot_kwargs):
+
+    if axes is None:
+        fig, axes = plt.subplots(2, 2,
+                                 sharex='col',
+                                 sharey='row')
+
+        for ax in axes.ravel():
+            ax.set_aspect('equal')
+        axes[1, 1].axis('off')
+        ax_3d = fig.add_subplot(224, projection='3d')
+    try:
+        ellipses = Ellipses(size=size,
+                            segment=cluster.interpolated.xs(label,
+                                                            level='label'),
+                            data=cluster.ellipses[size].xs(label,
+                                                           level='label'),
+                            coords=list(coords))
+    except KeyError:
+        return axes, ax_3d
+
+    for idx in ellipses.good_indices(cutoffs):
+        curve = ellipses.evaluate(idx)
+        axes[0, 0].plot(curve[0, :], curve[1, :], **plot_kwargs)
+        axes[0, 1].plot(curve[2, :], curve[1, :], **plot_kwargs)
+        axes[1, 0].plot(curve[0, :], curve[2, :], **plot_kwargs)
+        ax_3d.plot(curve[0, :], curve[1, :], curve[2, :], **plot_kwargs)
+    return axes, ax_3d
+
+# TODO
 def show_with_trail(time, upto_cur_pos,
                     z_stack, colors,
                     save_dir='.',
@@ -214,10 +315,11 @@ def show_with_trail(time, upto_cur_pos,
         return 'Graph saved to {}'.format(fig_name)
 
 
+
 def get_trail(positions, trail, time):
 
     start = max(0, time-trail)
-    times = positions.index.get_level_values('t')
+    times = positions.index.get_level_values('t_stamp')
     start = times[times >= start][0]
     try:
         upto_cur_pos = positions.loc[start: time]
@@ -324,105 +426,6 @@ def make_movie(positions, iter_stacks, xy_size,
         warnings.warn("""Movie couldn't be compiled""")
 
 
-def plot_rotation_events(cluster, ax=None,
-                         show_segments=False, **kwargs):
-    if ax is None:
-        fig, ax = plt.subplots()
-
-    colors = cluster.trajs.get_colors()
-    if show_segments:
-        n_labels = cluster.trajs.labels.size
-
-        for label in cluster.trajs.labels:
-            sub_dr = cluster.detected_rotations.loc[label]
-            color = colors[label]
-            ts = sub_dr.index.values
-            ts *= cluster.metadata['TimeIncrement']
-            shift = (label - n_labels/2) / 100.
-            ax.step(ts, sub_dr.values + shift, '-', c=color, lw=2, alpha=0.7)
-    n_detected =  pd.Series(
-        np.ones_like(cluster.detected_rotations),
-        index=cluster.detected_rotations.index).sum(level='t_stamp').astype(np.float)
-    total_rot = cluster.detected_rotations.sum(level='t_stamp') / n_detected
-
-    ts = total_rot.index.get_level_values('t_stamp').values.copy()
-    ts *= cluster.metadata['TimeIncrement']
-    ax.step(ts, total_rot.values, '-', c='k', lw=2)
-
-    ax.set_xlabel('Elapsed time (min)')
-    ax.set_ylabel('Rotation events')
-    ax.set_ylim(-0.1, 1.1)
-    plt.draw()
-    ax.set_title(cluster.metadata['FileName'])
-    return ax, total_rot, n_detected
-
-
-def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
-                         savefile=None, axes=None, ax_3d=None):
-    colors = cluster.trajs.get_colors()
-    segment = cluster.trajs.get_segments()[label]
-    scatter_kw = {'c':segment.t.astype(np.float),
-                  'cmap':'spectral',
-                  's':40,
-                  'alpha':0.8,
-                  'edgecolors':'none'}
-    line_kw = {'c':'gray',#tracker.label_colors[label],
-               'ls':'-',
-               'alpha':0.8, 'lw':0.75}
-    coords=['x_c', 'y_c', 'z_c']
-    axes, ax_3d = draw.show_4panels(cluster.trajs, label,
-                                    axes=axes, ax_3d=ax_3d,
-                                    scatter_kw=scatter_kw,
-                                    line_kw=line_kw,
-                                    coords=coords)
-    for size in sizes:
-        axes, ax_3d = show_ellipses(cluster, label, size,
-                                    cutoffs=cutoffs,
-                                    coords=coords,
-                                    axes=axes, ax_3d=ax_3d,
-                                    alpha=0.5, lw=0.75, c='r')
-
-    for ax in axes.flatten():
-        ax.plot([0], [0], 'k+', ms=20)
-    ax_3d.plot([0], [0], [0], 'k+', ms=20)
-    if savefile is not None:
-        plt.savefig(savefile)
-
-    return axes, ax_3d
-
-
-def show_ellipses(cluster, label, size,
-                  cutoffs,
-                  coords=['x_c', 'y_c', 'z_c'],
-                  axes=None, ax_3d=None,
-                  **plot_kwargs):
-
-    if axes is None:
-        fig, axes = plt.subplots(2, 2,
-                                 sharex='col',
-                                 sharey='row')
-
-        for ax in axes.ravel():
-            ax.set_aspect('equal')
-        axes[1, 1].axis('off')
-        ax_3d = fig.add_subplot(224, projection='3d')
-    try:
-        ellipses = Ellipses(size=size,
-                            segment=cluster.interpolated.xs(label,
-                                                            level='label'),
-                            data=cluster.ellipses[size].xs(label,
-                                                           level='label'),
-                            coords=list(coords))
-    except KeyError:
-        return axes, ax_3d
-
-    for idx in ellipses.good_indices(cutoffs):
-        curve = ellipses.evaluate(idx)
-        axes[0, 0].plot(curve[0, :], curve[1, :], **plot_kwargs)
-        axes[0, 1].plot(curve[2, :], curve[1, :], **plot_kwargs)
-        axes[1, 0].plot(curve[0, :], curve[2, :], **plot_kwargs)
-        ax_3d.plot(curve[0, :], curve[1, :], curve[2, :], **plot_kwargs)
-    return axes, ax_3d
 
 
 class Arrow3D(FancyArrowPatch):

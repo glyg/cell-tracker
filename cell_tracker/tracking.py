@@ -1,8 +1,14 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
+
 from sktracker.tracker.solver import ByFrameSolver
 from sktracker.tracker.solver import GapCloseSolver
 from sktracker.trajectories import Trajectories
-
-
 
 
 def track_cells(positions, max_speed, cut_penalty=2.,
