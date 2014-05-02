@@ -22,8 +22,8 @@ from PyQt4 import QtGui
 from sktracker.io import StackIO, ObjectsIO
 from sktracker.io.utils import load_img_list
 from sktracker.trajectories import Trajectories
-from . import CellCluster
-from .conf import default_metadata
+from .. import CellCluster
+from ..conf import default_metadata
 
 
 __all__ = ['get_from_excel', 'get_cluster', 'get_name']

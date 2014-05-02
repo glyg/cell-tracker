@@ -17,7 +17,6 @@ from sktracker.detection import nuclei_detector
 from sktracker.trajectories import Trajectories
 from sktracker.io import ObjectsIO, StackIO
 
-from .detection import build_iterator
 from .tracking import track_cells
 
 from . import ELLIPSIS_CUTOFFS
@@ -53,6 +52,17 @@ class CellCluster:
             log.info('Found trajectories in {}'.format(self.oio.store_path))
         except KeyError:
             pass
+        self._complete_metadata()
+
+    def _complete_metadata(self):
+        shape = self.metadata['Shape']
+        dim_order = self.metadata['DimensionOrder']
+        for dim_label in dim_order:
+            try:
+                dim_id = dim_order.index(dim_label)
+                self.metadata["Size" + dim_label] = shape[dim_id]
+            except:
+                self.metadata["Size" + dim_label] = 1
 
     @property
     def metadata(self):
@@ -101,8 +111,8 @@ class CellCluster:
             self.oio['trajs.back'] = self.trajs
             log.warning('''Backed up former `trajs` data in
                         'trajs.back' ''')
-        stack_iterator = build_iterator(self.stackio, preprocess)
-        self.trajs = nuclei_detector(stack_iterator(),
+        self.stack_iterator = build_iterator(self.stackio, preprocess)
+        self.trajs = nuclei_detector(self.stack_iterator(),
                                      metadata=self.metadata,
                                      **kwargs)
         self.oio['trajs'] = self.trajs
@@ -196,6 +206,18 @@ class CellCluster:
         data.sort_index(axis=1, inplace=True)
         self.detected_rotations = self.trajs.groupby(
             level='label').apply(get_segment_rotations, data)
+
+def build_iterator(stackio, preprocess=None):
+
+    if preprocess is None:
+        iterator = stackio.list_iterator()
+    else:
+        base_iterator = stackio.list_iterator()
+        def iterator():
+            for stack in base_iterator():
+                yield preprocess(stack)
+    return iterator
+
 
 
 def get_segment_rotations(segment, data):

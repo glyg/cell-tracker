@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pylab as plt
-
 from .graphics import show_histogram
+
 
 def inspect_stack(stackio, stack_num=0, show_hist=True):
 
@@ -29,18 +29,6 @@ def inspect_stack(stackio, stack_num=0, show_hist=True):
         show_histogram(im0, min(depth, 12), ax)
     return im0
 
-
-def build_iterator(stackio, preprocess=None):
-
-    if preprocess is None:
-        iterator = stackio.list_iterator()
-    else:
-        base_iterator = stackio.list_iterator()
-        def iterator():
-            for stack in base_iterator():
-                yield preprocess(stack)
-
-    return iterator
 
 def guess_preprocess(metadata, max_value, channel=0):
     '''
