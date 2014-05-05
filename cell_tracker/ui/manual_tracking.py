@@ -11,18 +11,21 @@ from ..graphics import show_n_panels, load_thumbs
 import numpy as np
 import matplotlib.pyplot as plt
 
+from sklearn.cluster import KMeans
+
 
 class ManualTracking:
     '''
     '''
-    def __init__(self, cluster,
+    def __init__(self, cluster, preprocess=None,
                  t0=0, n_panels=3, trail_length=10):
 
         self.t0 = t0
         self.n_panels = n_panels
         self.trail_length = trail_length
         self.cluster = cluster
-        self.thumbs = load_thumbs(cluster, reset_ROI=True)
+        self.thumbs = load_thumbs(cluster, preprocess=preprocess,
+                                  reset_ROI=True)
         self.figure, self.data_dict = show_n_panels(cluster, self.thumbs, t0,
                                                      self.n_panels,
                                                      self.trail_length)
@@ -127,3 +130,80 @@ def _closest_line(event):
             min_dist = min(dist)
             closest = line
     return closest
+
+def pick_border_cells(cluster, n_clusters=6):
+
+    kmean = KMeans(n_clusters)
+    kmean = kmean.fit(cluster.trajs[['x', 'y', 'z']])
+    cluster.trajs['new_label'] = kmean.labels_
+    fig, ax = plt.subplots()
+    labels = cluster.trajs['new_label'].unique()
+    centers = np.zeros((labels.size, 2))
+    for n, label in enumerate(labels):
+        points = cluster.trajs[cluster.trajs['new_label'] == label]
+        ax.plot(points['x'], points['y'], 'o', label=label, alpha=0.5)
+        centers[n, :] = points[['x', 'y']].mean(axis=0)
+
+    #ax.legend()
+    picks, = ax.plot([np.nan], [np.nan], 'ro') # empty line
+    picked = ClusterPicker(picks)
+    ax.set_title(cluster.metadata['FileName'])
+    plt.draw()
+    fig.canvas.start_event_loop(timeout=60)
+
+    good_labels = []
+    for x, y in zip(picked.xs, picked.ys):
+        sqdists = (centers[:, 0] - x)**2 + (centers[:, 1] - y)**2
+        good_labels.append(labels[sqdists.argmin()])
+    good_labels = np.unique(good_labels)
+    bad_labels = [lbl for lbl in labels
+                  if lbl not in good_labels]
+
+    all_goods = np.zeros_like(kmean.labels_)
+    for lbl in good_labels:
+        all_goods[kmean.labels_ == lbl] = 1
+    cluster.trajs['cluster_cells'] = all_goods
+    cluster.oio['raw'] = cluster.trajs
+
+    cluster.outer_cells = cluster.trajs[cluster.trajs['cluster_cells'] == 0]
+    cluster.trajs = cluster.trajs[cluster.trajs['cluster_cells'] == 1]
+    cluster.oio['trajs'] = cluster.trajs
+    ax.plot(cluster.trajs['x'].mean(),
+            cluster.trajs['y'].mean(),
+            'ks', mfc='none', ms=50)
+    plt.draw()
+
+    print('Thank you for your help!')
+
+
+
+class ClusterPicker:
+    '''
+'''
+
+    def __init__(self, picks):
+        self.picks = picks
+        self.xs = []
+        self.ys = []
+        self.canvas = picks.figure.canvas
+        self.cid = self.canvas.mpl_connect('button_press_event', self)
+        self.cid2 = self.canvas.mpl_connect('key_press_event', self)
+
+    def __call__(self, event):
+        if not hasattr(event, 'button'):
+            if event.key == 'enter':
+                self.canvas.stop_event_loop()
+                #plt.close(self.picks.figure)
+        else:
+            if event.inaxes!=self.picks.axes: return
+            tb = plt.get_current_fig_manager().toolbar
+            if tb.mode != '': return
+            if event.button == 3:
+                if len(self.xs) > 0:
+                    self.xs.pop()
+                    self.ys.pop()
+            elif event.button == 1:
+                self.xs.append(event.xdata)
+                self.ys.append(event.ydata)
+            self.picks.set_data(self.xs, self.ys)
+            self.canvas.draw()

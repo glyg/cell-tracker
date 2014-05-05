@@ -52,11 +52,16 @@ def polar_histogram(cellcluster, ax=None, **kwargs):
     ax.set_title(cellcluster.metadata['FileName'])
     return ax
 
-def show_overlayed(cellcluster, index, xy_ROI=None, ax=None, **kwargs):
+def show_overlayed(cellcluster, index, preprocess=None, xy_ROI=None, ax=None, **kwargs):
     '''
     Show the stack number `index` with the detected positions overlayed
     '''
+
     z_stack = cellcluster.stackio.get_tif_from_list(index).asarray()
+    if hasattr(cellcluster, 'preprocess'):
+        z_stack = cellcluster.preprocess(z_stack)
+    elif preprocess is not None:
+        z_stack = preprocess(z_stack)
     ax = _show_overlayed(z_stack, cellcluster.trajs.loc[index],
                          cellcluster.metadata['PhysicalSizeX'],
                          cellcluster.metadata['PhysicalSizeZ'],
@@ -323,11 +328,10 @@ def load_thumbs(cluster, reset_ROI=True,
     if reset_ROI:
         cluster.xy_ROI = (x_min, x_max,
                           y_min, y_max)
-    if not hasattr(cluster, 'stack_iterator'):
-        cluster.stack_iterator = build_iterator(cluster.stackio,
-                                                preprocess)
+    stack_iterator = build_iterator(cluster.stackio,
+                                    preprocess)
 
-    for t, stack in enumerate(cluster.stack_iterator()):
+    for t, stack in enumerate(stack_iterator()):
         if len(stack.shape) == 2:
             stack = stack[np.newaxis, ...]
         thumbs[t] = stack[:, x_min: x_max,
@@ -366,11 +370,11 @@ def show_with_trail(time, upto_cur_pos,
         cur_pos = upto_cur_pos.loc[u_times[-1]]
     labels = cur_pos.index.get_level_values('label')
 
-    ax_xy = show_overlayed(z_stack, cur_pos,
-                           xy_size, z_size,
-                           xy_ROI=xy_ROI,
-                           colors=colors.values,
-                           fig=fig, ax=ax)
+    ax_xy = _show_overlayed(z_stack, cur_pos,
+                            xy_size, z_size,
+                            xy_ROI=xy_ROI,
+                            colors=colors.values,
+                            fig=fig, ax=ax)
 
     if upto_cur_pos.shape[0] > 1:
         for label in labels:
