@@ -55,7 +55,8 @@ def get_from_excel(default_path='.'):
 
     ### Open the file dialog
     data_path, name = get_excel_file(default_path)
-
+    if data_path is None:
+        return
     ### Read the data
     trajs = pd.read_excel(data_path, 0)
     trajs.set_index(['t_stamp', 'label'],
@@ -99,8 +100,8 @@ def get_cluster(default_path='.', metadata=None):
          the container class for the tracking
     '''
 
-    if metadata is None:
-        metadata = default_metadata
+    # if metadata is None:
+    #     metadata = default_metadata
     data_path, name = get_dataset(default_path)
     if data_path is None:
         return
@@ -110,7 +111,8 @@ def get_cluster(default_path='.', metadata=None):
     if len(stores) == 0:
         objectsio = None
     elif len(stores) > 1:
-        log.info('''Multiple '.h5' found, loading metadata from images''')
+        log.info('''Multiple '.h5' found, '''
+                 '''loading metadata from images''')
         objectsio = None
     else:
         store_path = os.path.join(data_path, stores[0])
@@ -123,10 +125,6 @@ def get_cluster(default_path='.', metadata=None):
     else:
         stackio = StackIO(image_path_list=image_path_list,
                           metadata=metadata)
-        im0 = stackio.get_tif().asarray()
-        if len(im0.shape) == 4:
-            stackio.metadata['SizeC'] = im0.shape[0]
-
     cellcluster = CellCluster(objectsio=objectsio, stackio=stackio )
     return cellcluster
 

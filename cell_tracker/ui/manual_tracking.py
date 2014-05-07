@@ -12,6 +12,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from sklearn.cluster import KMeans
+from sktracker.trajectories import Trajectories
+import logging
+log = logging.getLogger(__name__)
 
 
 class ManualTracking:
@@ -24,8 +27,10 @@ class ManualTracking:
         self.n_panels = n_panels
         self.trail_length = trail_length
         self.cluster = cluster
-        self.thumbs = load_thumbs(cluster, preprocess=preprocess,
-                                  reset_ROI=True)
+        if not hasattr(self.cluster, 'thumbs'):
+            self.cluster.thumbs = load_thumbs(cluster, preprocess=preprocess,
+                                              reset_ROI=True)
+        self.thumbs = self.cluster.thumbs
         self.figure, self.data_dict = show_n_panels(cluster, self.thumbs, t0,
                                                      self.n_panels,
                                                      self.trail_length)
@@ -38,8 +43,9 @@ class ManualTracking:
         self.backups = []
 
     def __call__(self, event):
-        print(event.key)
+        self.curent_event = event
         if not hasattr(event, 'button'):
+            log.info(event.key)
             if event.key == 'ctrl+z':
                 if len(self.backups):
                     self.cluster.trajs = self.backups[-1]
@@ -48,25 +54,27 @@ class ManualTracking:
             elif event.key in [' ', 'right', 'up']:
                 self.forward()
             elif event.key in ['left', 'down']:
+                print('left')
                 self.backward()
             elif event.key in ['c', 'C', 'enter']:
                 if len(self.to_close) == 2:
                     self.backups.append(self.cluster.trajs.copy())
-                    close_gap(self.tracker,
-                              self.to_close[0],
-                              self.to_close[1])
+                    self.cluster.trajs = close_gap(self.cluster.trajs,
+                                                   self.to_close[0],
+                                                   self.to_close[1])
                     self.__update__()
                 else:
                     event.inaxes.set_title('Please choose only two trajectories')
                     self.__update__()
             elif event.key in ['x', 'X']:
                 if len(self.to_close) == 1:
+                    log.info('cut')
                     self.backups.append(self.cluster.trajs.copy())
-                    cut_at_point(self.cluster,
-                                 self.to_close[0], self.t0)
+                    self.cluster.trajs = cut_at_point(self.cluster.trajs,
+                                                      self.to_close[0], self.t0+1)
                     self.__update__()
                 else:
-                    event.inaxes.set_title('Please choose only two trajectories')
+                    event.inaxes.set_title('Please choose only one trajectory')
                     self.__update__()
 
         else:
@@ -78,13 +86,16 @@ class ManualTracking:
                 event.inaxes.plot(line.get_data()[0],
                                   line.get_data()[1], 'ks-', mfc='None')
             elif event.button == 3:
-                self.to_close.pop()
-                event.inaxes.lines.pop()
+                if len(self.to_close):
+                    self.to_close.pop()
+                    event.inaxes.lines.pop()
             self.canvas.draw()
 
     def forward(self):
-        self.t0 += 1
-        self.__update__()
+
+        if self.t0 < self.cluster.trajs.t_stamps[-1]:
+            self.t0 += 1
+            self.__update__()
 
     def backward(self):
 
@@ -108,6 +119,11 @@ def close_gap(trajs, label0, label1):
     new_labels = trajs.index.get_level_values('label').values
     new_labels[new_labels == label1] = label0
     trajs.relabel(new_labels)
+    ## Remove duplicates... TODO: fix intensity and area
+    grouped = trajs.groupby(level='t_stamp')
+    trajs = grouped.apply(lambda df: df.mean(level='label'))
+    log.info('relabeled label {} to label {}'.format(label0, label1))
+    return Trajectories(trajs)
 
 def cut_at_point(trajs, label, t):
 
@@ -116,6 +132,9 @@ def cut_at_point(trajs, label, t):
     points = (new_labels == label) & (times >= t)
     new_labels[points] = new_labels.max() + 1
     trajs.relabel(new_labels)
+    log.info('cut  segment {} at frame {}'.format(label, t))
+    return Trajectories(trajs)
+
 
 def _closest_line(event):
 
@@ -150,7 +169,8 @@ def pick_border_cells(cluster, n_clusters=6):
     ax.set_title(cluster.metadata['FileName'])
     plt.draw()
     fig.canvas.start_event_loop(timeout=60)
-
+    if not len(picked.xs):
+        return
     good_labels = []
     for x, y in zip(picked.xs, picked.ys):
         sqdists = (centers[:, 0] - x)**2 + (centers[:, 1] - y)**2
@@ -165,8 +185,10 @@ def pick_border_cells(cluster, n_clusters=6):
     cluster.trajs['cluster_cells'] = all_goods
     cluster.oio['raw'] = cluster.trajs
 
-    cluster.outer_cells = cluster.trajs[cluster.trajs['cluster_cells'] == 0]
-    cluster.trajs = cluster.trajs[cluster.trajs['cluster_cells'] == 1]
+    cluster.outer_cells = Trajectories(
+        cluster.trajs[cluster.trajs['cluster_cells'] == 0])
+    cluster.trajs = Trajectories(
+        cluster.trajs[cluster.trajs['cluster_cells'] == 1])
     cluster.oio['trajs'] = cluster.trajs
     ax.plot(cluster.trajs['x'].mean(),
             cluster.trajs['y'].mean(),

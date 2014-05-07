@@ -294,8 +294,12 @@ def show_n_panels(cluster, thumbs, time0,
             color = colors[label]
             upto = upto_cur_pos.xs(label, level='label')
             lines = ax.plot(upto.y / xy_size - y_min,
-                            upto.x / xy_size - x_min, 'o-',
+                            upto.x / xy_size - x_min, '-',
                             c=color, lw=4)
+            if upto.index.get_level_values('t_stamp').values[-1] == time0 + n:
+                ax.plot(upto.y.iloc[-1] / xy_size - y_min,
+                        upto.x.iloc[-1] / xy_size - x_min, 's',
+                        c=color, lw=4)
             data_dict[lines[0]] = label
         ax.set_title('Frame %i' % (time0 + n))
         ax.set_xlim(0, y_max-y_min)

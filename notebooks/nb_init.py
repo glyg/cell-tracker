@@ -10,9 +10,9 @@ import sys, os
 sys.path.append('..')
 sys.path.append('../../scikit-tracker')
 
-# Shut up warnings!
-import warnings
-warnings.filterwarnings("ignore")
+# # Shut up warnings!
+# import warnings
+# warnings.filterwarnings("ignore")
 
 
 import numpy as np

@@ -19,7 +19,7 @@ from sktracker.io import ObjectsIO, StackIO
 
 from .tracking import track_cells
 
-from . import ELLIPSIS_CUTOFFS
+from . import ELLIPSIS_CUTOFFS, default_metadata
 from .analysis import Ellipses
 
 
@@ -35,7 +35,6 @@ class CellCluster:
         ----------
 
         stackio : a :class:`sktracker.StackIO` instance
-
         objectsio : a :class:`sktracker.ObjectsIO` instance
 
         '''
@@ -56,13 +55,19 @@ class CellCluster:
 
     def _complete_metadata(self):
         shape = self.metadata['Shape']
+
         dim_order = self.metadata['DimensionOrder']
+        dim_order = dim_order.replace('I', 'Z')
+        self.metadata['DimensionOrder'] = dim_order
         for dim_label in dim_order:
             try:
                 dim_id = dim_order.index(dim_label)
                 self.metadata["Size" + dim_label] = shape[dim_id]
             except:
                 self.metadata["Size" + dim_label] = 1
+        for key, val in default_metadata.items():
+            if key not in self.metadata:
+                self.metadata[key] = val
 
     @property
     def metadata(self):
@@ -168,7 +173,7 @@ class CellCluster:
             self.trajs['theta'].dropna().astype(np.float),
             bins=np.linspace(-4*np.pi, 4*np.pi, 4 * 12 + 1))
 
-        self.oio['trajs'] = self.trajs
+        #self.oio['trajs'] = self.trajs
 
     def compute_ellipticity(self, size=8,
                             cutoffs=ELLIPSIS_CUTOFFS,
@@ -230,7 +235,7 @@ def get_segment_rotations(segment, data):
                                    index=pd.Index(np.arange(t0, t1), name='t_stamp'),
                                    name='detected_rotations')
     try:
-        sub_data = data.xs(label, level='label')
+        sub_data = data.loc[label]
     except IndexError:
         detected_rotations[:] = np.nan
         return detected_rotations

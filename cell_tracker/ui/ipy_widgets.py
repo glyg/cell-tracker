@@ -6,6 +6,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import numpy as np
+import collections
 
 from IPython.html import widgets
 from IPython.display import display
@@ -48,9 +49,7 @@ class SetMetadataWidget(widgets.ContainerWidget):
 
     def on_value_change(self, name, value):
         self._update_metadata()
-        print(value)
 
-import collections
 
 class TypeAgnosticTextWidget(widgets.ContainerWidget):
     """
