@@ -73,7 +73,7 @@ class CellCluster:
     def metadata(self):
         return self.oio.metadata
 
-    def get_center(self, coords=['x', 'y', 'z'], smooth=0, append=True):
+    def get_center(self, coords=['x', 'y', 'z'], smooth=0, append=True, relative=True):
         """Computes `self.center`, the average positions (time stamp wise).
 
         If `append` is True, appends columns named after the passed
@@ -103,10 +103,13 @@ class CellCluster:
             self.center = self.trajs[coords].mean(axis=0, level='t_stamp')
         else:
             interpolated = self.trajs.time_interpolate(coords=coords, s=smooth)
-            self.center =  interpolated.mean(axis=0, level='stamp')
-        new_cols = [c+'_c' for c in coords]
+            self.center =  interpolated[coords].mean(axis=0, level='t_stamp')
         if append:
+            new_cols = [c+'_c' for c in coords]
             self.trajs[new_cols] = self.reindexed_center()
+        if relative:
+            relative_coords = [c+'_r' for c in coords]
+            self.trajs[relative_coords] = self.trajs[coords] - self.reindexed_center()
 
     def detect_cells(self, preprocess, **kwargs):
         '''
@@ -155,18 +158,14 @@ class CellCluster:
         Computes the angle of each cell with respect to the cluster center
 
         '''
-        self.do_pca(coords=['x_c', 'y_c', 'z_c'])
-        self.trajs['theta'] = np.arctan2(self.trajs['y_c_pca'],
-                                         self.trajs['x_c_pca'])
-        self.trajs['rho'] = np.hypot(self.trajs['y_c_pca'],
-                                     self.trajs['x_c_pca'])
+        self.do_pca(coords=['x_r', 'y_r', 'z_r'])
+        self.trajs['theta'] = np.arctan2(self.trajs['y_r_pca'],
+                                         self.trajs['x_r_pca'])
+        self.trajs['rho'] = np.hypot(self.trajs['y_r_pca'],
+                                     self.trajs['x_r_pca'])
 
-        self.trajs['dtheta'] = 0.
-        grouped = self.trajs.groupby(level='label')
+        grouped = self.trajs.groupby(level='label', as_index=False)
         tmp_trajs = grouped.apply(continuous_theta)
-        tmp_trajs.index.set_names(['label', 't_stamp'],
-                                   inplace=True)
-        tmp_trajs = tmp_trajs.swaplevel('label', 't_stamp')
         tmp_trajs = tmp_trajs.sortlevel('t_stamp')
         self.trajs = Trajectories(tmp_trajs)
         self.theta_bin_count, self.theta_bins = np.histogram(
@@ -177,7 +176,7 @@ class CellCluster:
 
     def compute_ellipticity(self, size=8,
                             cutoffs=ELLIPSIS_CUTOFFS,
-                            coords=['x_c', 'y_c', 'z_c'], smooth=0):
+                            coords=['x_r', 'y_r', 'z_r'], smooth=0):
 
         if not hasattr(self, 'ellipses'):
             self.ellipses = {}
@@ -236,7 +235,7 @@ def get_segment_rotations(segment, data):
                                    name='detected_rotations')
     try:
         sub_data = data.loc[label]
-    except IndexError:
+    except KeyError:
         detected_rotations[:] = np.nan
         return detected_rotations
     sub_time = sub_data.index.values
@@ -267,16 +266,12 @@ def continuous_theta(segment):
     Computes a continuous angle from a 2*np.pi periodic one
     '''
     if segment.shape[0] == 1:
-        return None
+        segment['dtheta'] = 0
+        return segment
     theta0 =  segment['theta'].iloc[0]
     segment['dtheta'] = segment['theta'].diff()
     segment['dtheta'].iloc[0] = 0
     segment['dtheta'][segment['dtheta'] > np.pi] -= 2 * np.pi
     segment['dtheta'][segment['dtheta'] < - np.pi] += 2 * np.pi
     segment['theta'] = segment['dtheta'].cumsum() + theta0
-    segment.reset_index(level=1, drop=True, inplace=True)
-    segment.reset_index(level=1, drop=True, inplace=True)
-    segment.reindex_like(segment)
-    segment['theta'].iloc[0] = theta0
-
     return segment

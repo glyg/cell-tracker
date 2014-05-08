@@ -21,7 +21,7 @@ class Ellipses():
                  cutoffs=ELLIPSIS_CUTOFFS,
                  segment=None,
                  data=None,
-                 coords=['x_c', 'y_c', 'z_c']):
+                 coords=['x_r', 'y_r', 'z_r']):
         self.coords = coords
         self.segment = segment
         self.size = size
@@ -172,7 +172,7 @@ class Ellipses():
 
 
 def fit_arc_ellipse(segment, start, stop,
-                    coords=['x_c', 'y_c', 'z_c']):
+                    coords=['x_r', 'y_r', 'z_r']):
 
     pca = PCA()
     sub_segment = segment[coords].loc[start:stop]

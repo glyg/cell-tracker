@@ -49,7 +49,8 @@ def polar_histogram(cellcluster, ax=None, **kwargs):
                   width=width, bottom=0.0, **kwargs)
     #ax.set_rgrids([0.05, 0.1, 0.15,], angle=90)
     #ax.set_rmax(0.18)
-    ax.set_title(cellcluster.metadata['FileName'])
+    short_name = cellcluster.metadata['FileName'].split(os.path.sep)[-1].split('.')[0]
+    ax.set_title(short_name)
     return ax
 
 def show_overlayed(cellcluster, index, preprocess=None, xy_ROI=None, ax=None, **kwargs):
@@ -210,7 +211,7 @@ def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
     line_kw = {'c':'gray',#tracker.label_colors[label],
                'ls':'-',
                'alpha':0.8, 'lw':0.75}
-    coords=['x_c', 'y_c', 'z_c']
+    coords=['x_r', 'y_r', 'z_r']
     axes, ax_3d = draw.show_4panels(cluster.trajs, label,
                                     axes=axes, ax_3d=ax_3d,
                                     scatter_kw=scatter_kw,
@@ -221,7 +222,7 @@ def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
                                     cutoffs=cutoffs,
                                     coords=coords,
                                     axes=axes, ax_3d=ax_3d,
-                                    alpha=0.5, lw=0.75, c='r')
+                                    alpha=1., lw=2., c='r')
 
     for ax in axes.flatten():
         ax.plot([0], [0], 'k+', ms=20)
@@ -234,7 +235,7 @@ def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
 
 def show_ellipses(cluster, label, size,
                   cutoffs,
-                  coords=['x_c', 'y_c', 'z_c'],
+                  coords=['x_r', 'y_r', 'z_r'],
                   axes=None, ax_3d=None,
                   **plot_kwargs):
 
@@ -255,7 +256,8 @@ def show_ellipses(cluster, label, size,
                                                            level='label'),
                             coords=list(coords))
     except KeyError:
-        return axes, ax_3d
+        raise
+        #return axes, ax_3d
 
     for idx in ellipses.good_indices(cutoffs):
         curve = ellipses.evaluate(idx)
