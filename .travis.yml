@@ -41,8 +41,10 @@ before_install:
     - conda install --yes matplotlib
     - pip install wheel
     - pip install coverage
+    - cd ..
     - git clone git://github.com/bnoi/scikit-tracker.git
     - cd scikit-tracker && python setup.py install
+    - cd ../cell-tracker
 
 install:
     - python setup.py build_ext --inplace
