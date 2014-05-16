@@ -42,7 +42,7 @@ before_install:
     - pip install wheel
     - pip install coverage
     - git clone git://github.com/bnoi/scikit-tracker.git
-    - cd scikit-tracker && make install
+    - cd scikit-tracker && python setup.py install
 
 install:
     - python setup.py build_ext --inplace
