@@ -41,7 +41,7 @@ before_install:
     - conda install --yes matplotlib
     - pip install wheel
     - pip install coverage
-    - git clone git@github.com:bnoi/scikit-tracker.git
+    - git clone git://github.com/bnoi/scikit-tracker.git
     - cd scikit-tracker && make install
 
 install:
