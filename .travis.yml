@@ -53,4 +53,4 @@ install:
 
 script:
     # Run all tests
-    - nosetests cell-tracker --with-coverage --cover-package=cell_tracker -v
+    - nosetests cell_tracker --with-coverage --cover-package=cell_tracker -v
