@@ -29,7 +29,7 @@ from ..conf import default_metadata
 __all__ = ['get_from_excel', 'get_cluster', 'get_name']
 
 
-def get_from_excel(default_path='.'):
+def get_from_excel(data_path):
     '''
     This opens a file dialog allowing ot select an excel file containing
     the tracked data, and returns a :class:`CellCluster` object.
@@ -37,8 +37,7 @@ def get_from_excel(default_path='.'):
     Paramteters
     -----------
 
-    default_path : str
-        the path where the file dialog opens
+    data_path: the path to the excelTM file
 
     Returns
     -------
@@ -53,10 +52,6 @@ def get_from_excel(default_path='.'):
     in the project's `data` directory
     '''
 
-    ### Open the file dialog
-    data_path, name = get_excel_file(default_path)
-    if data_path is None:
-        return
     ### Read the data
     trajs = pd.read_excel(data_path, 0)
     trajs.set_index(['t_stamp', 'label'],
@@ -82,7 +77,7 @@ def get_from_excel(default_path='.'):
     cellcluster.oio['trajs'] = trajs
     return cellcluster
 
-def get_cluster(default_path='.', metadata=None):
+def get_cluster(default_path='.', metadata=None, single_file=False):
     '''
     This opens a file dialog allowing to select the directory for
     the tracked data, and returns a :class:`CellCluster` object.
@@ -99,43 +94,57 @@ def get_cluster(default_path='.', metadata=None):
     cellcluster : a :class:`CellCluster` instance
          the container class for the tracking
     '''
-
-    # if metadata is None:
-    #     metadata = default_metadata
-    data_path, name = get_dataset(default_path)
+    tiff_exts = ['.tiff', '.tif', '.TIFF', '.TIF']
+    valid_exts = tiff_exts + ['.h5', '.xlsx']
+    filter  = ' '.join(['*{}'.format(ext) for ext in valid_exts])
+    objectsio = None
+    data_path, name = get_dataset(default_path, filter)
     if data_path is None:
         return
 
-    stores = [h5file for h5file in os.listdir(data_path)
-              if h5file.endswith('.h5')]
-    if len(stores) == 0:
-        objectsio = None
-    elif len(stores) > 1:
-        log.info('''Multiple '.h5' found, '''
-                 '''loading metadata from images''')
-        objectsio = None
-    else:
-        store_path = os.path.join(data_path, stores[0])
+    ## If we find a HDF store, use it
+    if data_path.endswith('.h5'):
+        store_path = data_path
         objectsio = ObjectsIO(store_path=store_path)
+        image_path = objectsio.metadata['FileName']
+        image_path_list = None
+        if not single_file:
+            data_path = os.path.dirname(data_path)
+            image_path_list = load_img_list(data_path)
 
-    image_path_list = load_img_list(data_path)
+    ## Excel
+    elif data_path.endswith('.xslx'):
+        cellcluster = get_from_excel(data_path)
+        return cellcluster
+
+    ## Tiff File
+    elif any([data_path.endswith(ext) for ext in tiff_exts]):
+        if single_file:
+            image_path = data_path
+            image_path_list = None
+        else:
+            image_path = None
+            data_path = os.path.dirname(data_path)
+            image_path_list = load_img_list(data_path)
     if objectsio is not None:
-        stackio = StackIO(image_path_list=image_path_list,
+        stackio = StackIO(image_path=image_path,
+                          image_path_list=image_path_list,
                           metadata=objectsio.metadata)
     else:
-        stackio = StackIO(image_path_list=image_path_list,
+        stackio = StackIO(image_path=image_path,
+                          image_path_list=image_path_list,
                           metadata=metadata)
     cellcluster = CellCluster(objectsio=objectsio, stackio=stackio )
     return cellcluster
 
-def get_dataset(default='.'):
+def get_dataset(default='.', filter='*.*'):
     '''
     Opens a directory select dialog
     '''
     app = QtGui.QApplication.instance()
     if not app:
         app = QtGui.QApplication(sys.argv)
-    out = QtGui.QFileDialog.getExistingDirectory(directory=default)
+    out = QtGui.QFileDialog.getOpenFileName(directory=default, filter=filter)
     if not len(out):
         print('''No data loaded''')
         return None, None
