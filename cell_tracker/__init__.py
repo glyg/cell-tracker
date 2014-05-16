@@ -3,7 +3,11 @@ from .conf import ELLIPSIS_CUTOFFS
 
 #from .analysis import Ellipses
 from .objects import build_iterator, CellCluster
-from . import ui
+try:
+    from . import ui
+except ImportError:
+    print('UI tools require IPython and PyQt to function, '
+          'resolve those dependencies if you want to use those')
 from . import graphics
 
 from .detection import inspect_stack, show_histogram
