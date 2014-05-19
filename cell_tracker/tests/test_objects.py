@@ -12,9 +12,9 @@ from cell_tracker import CellCluster
 
 
 
-def test_cellcuster_fromoio():
+# def test_cellcuster_fromoio():
 
-    store_path = data.nuclei_h5_temp()
-    oio = ObjectsIO.from_h5(store_path)
-    cluster = CellCluster(oio)
+#     store_path = data.nuclei_h5_temp()
+#     oio = ObjectsIO.from_h5(store_path)
+#     cluster = CellCluster(oio)
 
