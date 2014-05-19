@@ -13,6 +13,8 @@ from . import graphics
 from .detection import inspect_stack, show_histogram
 from .detection import guess_preprocess
 
+from . import data
+
 
 import logging
 log = logging.getLogger(__name__)

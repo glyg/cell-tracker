@@ -6,7 +6,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 
-from sktracker import data
+from cell_tracker import data
 from sktracker.io import StackIO, ObjectsIO
 from cell_tracker import CellCluster
 
