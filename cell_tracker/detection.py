@@ -5,7 +5,11 @@ from .graphics import show_histogram
 
 def inspect_stack(stackio, stack_num=0, show_hist=True):
 
-    im0 = stackio.get_tif_from_list(stack_num).asarray()
+    if stackio.image_path_list is not None:
+        im0 = stackio.get_tif_from_list(stack_num).asarray()
+    else:
+        im0 = stackio.get_tif().asarray()[stack_num, ...]
+
     shape, maxI, n_uniques = (im0.shape, im0.max(),
                               np.unique(im0).size)
 

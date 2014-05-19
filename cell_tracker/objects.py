@@ -73,7 +73,8 @@ class CellCluster:
     def metadata(self):
         return self.oio.metadata
 
-    def get_center(self, coords=['x', 'y', 'z'], smooth=0, append=True, relative=True):
+    def get_center(self, coords=['x', 'y', 'z'], smooth=0,
+                   append=True, relative=True):
         """Computes `self.center`, the average positions (time stamp wise).
 
         If `append` is True, appends columns named after the passed
@@ -213,16 +214,17 @@ class CellCluster:
 
 def build_iterator(stackio, preprocess=None):
 
-    if preprocess is None:
-        iterator = stackio.list_iterator()
-    else:
+    if stackio.image_path_list is not None:
         base_iterator = stackio.list_iterator()
+    else:
+        base_iterator = stackio.image_iterator(-3)
+    if preprocess is None:
+        iterator = base_iterator
+    else:
         def iterator():
             for stack in base_iterator():
                 yield preprocess(stack)
     return iterator
-
-
 
 def get_segment_rotations(segment, data):
 
