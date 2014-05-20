@@ -19,11 +19,9 @@ import warnings
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d, Axes3D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
 from scipy.ndimage import center_of_mass
 from sktracker.trajectories import draw
 
-import os
 from .analysis import Ellipses
 from .objects import build_iterator
 
@@ -53,12 +51,13 @@ def polar_histogram(cellcluster, ax=None, **kwargs):
     ax.set_title(short_name)
     return ax
 
-def show_overlayed(cellcluster, index, preprocess=None, xy_ROI=None, ax=None, **kwargs):
+def show_overlayed(cellcluster, index, preprocess=None,
+                   xy_ROI=None, ax=None, **kwargs):
     '''
     Show the stack number `index` with the detected positions overlayed
     '''
 
-    z_stack = cellcluster.stackio.get_tif_from_list(index).asarray()
+    z_stack = cellcluster.get_z_stack(index)
     if hasattr(cellcluster, 'preprocess'):
         z_stack = cellcluster.preprocess(z_stack)
     elif preprocess is not None:
@@ -89,8 +88,8 @@ def _show_overlayed(z_stack, positions,
         z_stack = z_stack[:, x_min:x_max, y_min:y_max]
 
     else:
-        x_min, xmax, y_min, y_max = (0, z_stack.shape[1],
-                                     0, z_stack.shape[2])
+        x_min, xmax, y_min, y_max = (0, z_stack.shape[-2],
+                                     0, z_stack.shape[-1])
 
     # xy projection:
     if ax is None:

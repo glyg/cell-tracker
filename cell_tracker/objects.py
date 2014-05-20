@@ -73,6 +73,22 @@ class CellCluster:
     def metadata(self):
         return self.oio.metadata
 
+    def get_z_stack(self, stack_num):
+        """
+        Returns the z stack at the time stamp
+        given by stack_num
+
+        For convenience, if this is a 2D image, it translates
+        it to 3D
+        """
+        if self.stackio.image_path_list is not None:
+            z_stack = self.stackio.get_tif_from_list(stack_num).asarray()
+        else:
+            z_stack = self.stackio.get_tif().asarray()[stack_num, ...]
+        if len(z_stack.shape) == 2:
+            z_stack = z_stack[np.newaxis, ...]
+        return z_stack
+
     def get_center(self, coords=['x', 'y', 'z'], smooth=0,
                    append=True, relative=True):
         """Computes `self.center`, the average positions (time stamp wise).
@@ -217,7 +233,7 @@ def build_iterator(stackio, preprocess=None):
     if stackio.image_path_list is not None:
         base_iterator = stackio.list_iterator()
     else:
-        base_iterator = stackio.image_iterator(-3)
+        base_iterator = stackio.image_iterator(-2)
     if preprocess is None:
         iterator = base_iterator
     else:
