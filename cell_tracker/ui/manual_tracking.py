@@ -30,7 +30,7 @@ class ManualTracking:
         if not hasattr(self.cluster, 'thumbs'):
             self.cluster.thumbs = load_thumbs(cluster, preprocess=preprocess,
                                               reset_ROI=True)
-        self.thumbs = self.cluster.thumbs
+        self.thumbs = (self.cluster.thumbs.max() - self.cluster.thumbs) * 0.75
         self.figure, self.data_dict = show_n_panels(cluster, self.thumbs, t0,
                                                      self.n_panels,
                                                      self.trail_length)
@@ -112,7 +112,6 @@ class ManualTracking:
             trail_length=self.trail_length,
             fig=self.figure)
         self.to_close = []
-
 
 def close_gap(trajs, label0, label1):
 
