@@ -68,11 +68,14 @@ $ cd cell-tracker
 $ python setup.py install
 ```
 
+If it complains about gcc, try installing build-essentials (if you're
+using a debian-like distro).
+
 # Usage
 
-If it complains about gcc, try installing build-essentials (if you're
-using a debian-like distro) In the `cell-tracker` source folder,
-you'll find a `notebooks` folder. Copy it all somewhere in your home folder, that's where you'll use the code.
+In the `cell-tracker` source folder, you'll find a `notebooks` folder.
+
+Copy it all somewhere in your home folder, that's where you'll use the code.
 
 Start an ipython notebook (still under the py33 virtual environment):
 ```
