@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pylab as plt
 from .graphics import show_histogram
-
+from .conf import detection_parameters
 
 def inspect_stack(cluster, stack_num=0, show=True):
 
@@ -37,6 +37,26 @@ def inspect_stack(cluster, stack_num=0, show=True):
         show_histogram(im0, min(depth, 12), ax1)
 
     return im0
+
+from sktracker.detection.nuclei_detector import detect_one_stack
+
+def single_stack_detection(cluster, stack_num, preprocess):
+
+    metadata = cluster.oio.metadata
+
+    parameters = detection_parameters.copy()
+    parameters['min_z_size'] = parameters['min_z_size'] / metadata['PhysicalSizeZ']
+    parameters['min_radius'] /= metadata['PhysicalSizeX']
+    parameters['max_radius'] /= metadata['PhysicalSizeX']
+    parameters['nuc_distance'] /= metadata['PhysicalSizeX']
+
+    stack = cluster.get_z_stack(stack_num)
+    if preprocess is not None:
+        stack = preprocess(stack)
+
+    one_stack_output = detect_one_stack((stack, detection_parameters),
+                                        full_output=True)
+    return stack, one_stack_output
 
 
 def guess_preprocess(metadata, max_value, channel=0):

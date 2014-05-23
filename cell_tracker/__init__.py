@@ -1,6 +1,3 @@
-from .conf import default_metadata
-from .conf import ELLIPSIS_CUTOFFS
-
 #from .analysis import Ellipses
 from .objects import build_iterator, CellCluster
 
@@ -14,6 +11,10 @@ from . import graphics
 from .detection import inspect_stack, show_histogram
 from .detection import guess_preprocess
 from . import data
+from .conf import defaults
+
+detection_parameters = defaults['detection_parameters']
+ellipsis_cutoffs = defaults['ellipsis_cutoffs']
 
 import logging
 log = logging.getLogger(__name__)

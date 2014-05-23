@@ -8,47 +8,74 @@ from __future__ import print_function
 import numpy as np
 import collections
 
+
+
 from IPython.html import widgets
 from IPython.display import display
-from ..conf import default_metadata
+from ..conf import defaults
 
 
-def set_metadata(metadata=default_metadata):
-    smw = SetMetadataWidget(metadata)
+
+def set_metadata(metadata=None,
+                 to_display=None):
+
+    if metadata is None:
+        metadata = defaults['metadata']
+    if to_display is None:
+        to_display= defaults['metadata_display']
+
+    smw = SettingsWidget(metadata, to_display)
     display(smw)
-    for child in smw.children:
-        if len(child.children) > 1:
-            child.remove_class('vbox')
-            child.add_class('hbox')
 
 
-class SetMetadataWidget(widgets.ContainerWidget):
-    ''' IPython widget to handle metadata in a user friendly way
+def set_parameters(paramters=None, to_display=None):
+    if paramters is None:
+        parameters = defaults['detection_parameters']
+    if to_display is None:
+        to_display= defaults['detection_display']
+
+    smw = SettingsWidget(parameters, to_display)
+    display(smw)
+
+
+class SettingsWidget(widgets.ContainerWidget):
+    ''' IPython widget to handle metadata or parameters in a user friendly way
     '''
 
-    def __init__(self, metadata):
+    def __init__(self, settings, to_display):
         '''
-        Creates a widget to handle metadata
-        '''
+        Creates a widget to handle settings
 
-        self.metadata = metadata
+        Paramters
+        ---------
+
+        settings: a dict like object
+            the data to be set
+        to_display: a dict like object
+            dict or OrderedDict with the keys from `settings`
+            that need to be displayed, and the text string to
+            appear next to it
+        '''
+        self.settings = settings
         children = []
-        for key, val in metadata.items():
-            child = TypeAgnosticTextWidget(key, val)
+        for key in to_display.keys():
+            val = self.settings[key]
+            descr = to_display[key]
+            child = TypeAgnosticTextWidget(key, descr, val)
             for grandchild in child.children:
                 grandchild.on_trait_change(self.on_value_change, 'value')
             children.append(child)
         self.children = children
 
-    def _update_metadata(self):
+    def _update_settings(self):
         """
 
         """
         for child in self.children:
-            self.metadata[child.description] = child.value
+            self.settings[child.key] = child.value
 
     def on_value_change(self, name, value):
-        self._update_metadata()
+        self._update_settings()
 
 
 class TypeAgnosticTextWidget(widgets.ContainerWidget):
@@ -57,8 +84,9 @@ class TypeAgnosticTextWidget(widgets.ContainerWidget):
     the proper textwidget according to the type.
     """
 
-    def __init__(self, description, value):
+    def __init__(self, key, description, value):
 
+        self.key = key
         self.description = description
         if isinstance(value, np.float):
             self.children = (widgets.FloatTextWidget(description=description,

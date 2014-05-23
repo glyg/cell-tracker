@@ -26,6 +26,49 @@ from .analysis import Ellipses
 from .objects import build_iterator
 
 
+
+def show_one_stack_output(stack, one_stack_output):
+    '''
+    Displays the result of `detection.one_stack_output`
+    '''
+    fig, axes = plt.subplots(stack.shape[0] // 3, 3,
+                             sharex=True, sharey=True,
+                             figsize=(9, 0.5*stack.shape[0]))
+    for n, sub_labeled in enumerate(one_stack_output['labeled_stack']):
+        try:
+            ax = axes[n//3, n % 3]
+        except IndexError:
+            break
+        ax.imshow(sub_labeled, cmap='gray')
+        ax.set_frame_on(False)
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    ax.set_xlim(0, sub_labeled.shape[0])
+    ax.set_ylim(0, sub_labeled.shape[1])
+
+    if 'all_props' in one_stack_output:
+        for lbl, pos in one_stack_output['all_props'].iterrows():
+            n = np.round(pos.z)
+            try:
+                ax = axes[n//3, n % 3]
+            except IndexError:
+                continue
+            ax.plot(pos.y, pos.x, 'o',
+                    mfc='b', alpha=0.5)
+
+    if 'positions' in one_stack_output:
+        for lbl, pos in one_stack_output['positions'].iterrows():
+            n = np.round(pos.z)
+            try:
+                ax = axes[n//3, n % 3]
+            except IndexError:
+                continue
+            ax.plot(pos.y, pos.x, 'o',
+                    mec='r', mew=2, ms=10,
+                    mfc='none', alpha=0.8)
+
+
 def show_histogram(image, depth, ax=None):
     if ax is None:
         fig, ax = plt.subplots()

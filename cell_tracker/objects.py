@@ -19,7 +19,11 @@ from sktracker.io import ObjectsIO, StackIO
 
 from .tracking import track_cells
 
-from . import ELLIPSIS_CUTOFFS, default_metadata
+from .conf import defaults
+
+ellipsis_cutoffs = defaults['ellipsis_cutoffs']
+default_metadata = defaults['metadata']
+
 from .analysis import Ellipses
 
 
@@ -123,7 +127,7 @@ class CellCluster:
             self.center =  interpolated[coords].mean(axis=0, level='t_stamp')
         if append:
             new_cols = [c+'_c' for c in coords]
-            self.trajs[new_cols] = self.reindexed_center()
+            self.trajs[new_cols] = self._reindexed_center()
         if relative:
             relative_coords = [c+'_r' for c in coords]
             self.trajs[relative_coords] = self.trajs[coords] - self.reindexed_center()
@@ -148,7 +152,7 @@ class CellCluster:
         self.trajs = track_cells(self.trajs, **kwargs)
         self.oio['trajs'] = self.trajs
 
-    def reindexed_center(self):
+    def _reindexed_center(self):
         return self.center.reindex(self.trajs.index, level='t_stamp')
 
     def do_pca(self, df=None, ndims=3,
@@ -192,7 +196,7 @@ class CellCluster:
         #self.oio['trajs'] = self.trajs
 
     def compute_ellipticity(self, size=8,
-                            cutoffs=ELLIPSIS_CUTOFFS,
+                            cutoffs=ellipsis_cutoffs,
                             coords=['x_r', 'y_r', 'z_r'], smooth=0):
 
         if not hasattr(self, 'ellipses'):

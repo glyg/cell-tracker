@@ -13,12 +13,14 @@ from scipy.optimize import leastsq
 from sktracker.trajectories import Trajectories
 from sktracker.io import ObjectsIO, StackIO
 
-from . import ELLIPSIS_CUTOFFS
+from .conf import defaults
+
+ellipsis_cutoffs = defaults['ellipsis_cutoffs']
 
 class Ellipses():
 
     def __init__(self, size=0,
-                 cutoffs=ELLIPSIS_CUTOFFS,
+                 cutoffs=ellipsis_cutoffs,
                  segment=None,
                  data=None,
                  coords=['x_r', 'y_r', 'z_r']):
@@ -154,7 +156,7 @@ class Ellipses():
                                        np.exp(x) > min_val)
 
 
-    def good_indices(self, cutoffs=ELLIPSIS_CUTOFFS):
+    def good_indices(self, cutoffs=ellipsis_cutoffs):
 
         max_e = cutoffs['max_ellipticity']
         min_g = cutoffs['min_gof']
