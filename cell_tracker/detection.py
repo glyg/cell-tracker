@@ -1,7 +1,12 @@
 import numpy as np
 import matplotlib.pylab as plt
+
+from sktracker.detection.nuclei_detector import detect_one_stack
+
+
 from .graphics import show_histogram
 from .conf import detection_parameters
+
 
 def inspect_stack(cluster, stack_num=0, show=True):
 
@@ -38,7 +43,6 @@ def inspect_stack(cluster, stack_num=0, show=True):
 
     return im0
 
-from sktracker.detection.nuclei_detector import detect_one_stack
 
 def single_stack_detection(cluster, stack_num, preprocess):
 
@@ -54,7 +58,7 @@ def single_stack_detection(cluster, stack_num, preprocess):
     if preprocess is not None:
         stack = preprocess(stack)
 
-    one_stack_output = detect_one_stack((stack, detection_parameters),
+    one_stack_output = detect_one_stack((stack, parameters),
                                         full_output=True)
     return stack, one_stack_output
 
