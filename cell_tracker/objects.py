@@ -113,7 +113,8 @@ class CellCluster:
 
         append: bool, default True
             If True, creates columns in `self.trajs` with the coordinates names
-            suffixed with '_c' with the repeated  center postion
+            suffixed with '_c' with the repeated  center postion and columns
+            suffixed with `_r` with the positions relative to the center
 
         See Also
         --------
@@ -130,7 +131,7 @@ class CellCluster:
             self.trajs[new_cols] = self._reindexed_center()
         if relative:
             relative_coords = [c+'_r' for c in coords]
-            self.trajs[relative_coords] = self.trajs[coords] - self.reindexed_center()
+            self.trajs[relative_coords] = self.trajs[coords] - self._reindexed_center()
 
     def detect_cells(self, preprocess, **kwargs):
         '''
@@ -168,8 +169,10 @@ class CellCluster:
         if ndims == 2:
             coords = coords[:2]
             pca_coords = pca_coords[:2]
-
-        rotated = self.pca.fit_transform(df[coords])
+        try:
+            rotated = self.pca.fit_transform(df[coords])
+        except ValueError:
+            raise ('''Remove non finite values before you attempt to perform PCA''')
         for n, coord in enumerate(pca_coords):
             df[coord] = rotated[:, n]
         return df

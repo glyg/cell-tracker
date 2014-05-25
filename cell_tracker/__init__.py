@@ -10,6 +10,7 @@ from . import graphics
 
 from .detection import inspect_stack, show_histogram
 from .detection import guess_preprocess
+from . import preprocess
 from . import data
 from .conf import defaults
 

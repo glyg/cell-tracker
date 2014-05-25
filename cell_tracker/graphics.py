@@ -150,12 +150,30 @@ def _show_overlayed(z_stack, positions,
     ax_xy.set_ylim(y_lim)
     return ax_xy
 
-def show_projected(z_stack, positions,
-                   xy_size, z_size,
-                   xy_ROI=None,
-                   ax=None, **kwargs):
+def show_projected(cellcluster, index, preprocess=None,
+                   xy_ROI=None, ax=None, **kwargs):
+    '''
+    Show the stack number `index` with the detected positions overlayed
+    on maximum intensity projections of the stack in the 3 directions
+    '''
+
+    z_stack = cellcluster.get_z_stack(index)
+    if hasattr(cellcluster, 'preprocess'):
+        z_stack = cellcluster.preprocess(z_stack)
+    elif preprocess is not None:
+        z_stack = preprocess(z_stack)
+    ax = _show_projected(z_stack, cellcluster.trajs.loc[index],
+                         cellcluster.metadata['PhysicalSizeX'],
+                         cellcluster.metadata['PhysicalSizeZ'],
+                         xy_ROI=xy_ROI, ax=ax, **kwargs)
+
+
+def _show_projected(z_stack, positions,
+                    xy_size, z_size,
+                    xy_ROI=None,
+                    ax=None, **kwargs):
     if ax is None:
-        fig, ax = plt.subplots(figsize=(6, 6))
+        fig, ax = plt.subplots(figsize=(8, 8))
     elif ax is not None:
         fig = ax.get_figure()
 
@@ -173,6 +191,9 @@ def show_projected(z_stack, positions,
         x_min, xmax, y_min, y_max = (0, z_stack.shape[1],
                                      0, z_stack.shape[2])
 
+    fig_width, fig_height = fig.get_size_inches()
+    proj_height = fig_width * 0.3 # Allow for margins
+
     # xy projection:
     if ax is None:
         ax_xy = fig.add_subplot(111)
@@ -185,14 +206,14 @@ def show_projected(z_stack, positions,
                   positions['x'] / xy_size - x_min,
                   **kwargs)
     divider = make_axes_locatable(ax_xy)
-    ax_yz = divider.append_axes("top", 1.1,
+    ax_yz = divider.append_axes("top", proj_height,
                                 pad=0.2, sharex=ax_xy)
     ax_yz.imshow(z_stack.max(axis=1),
                  aspect=z_size/xy_size)
     ax_yz.scatter(positions['y'] / xy_size  - y_min,
                   positions['z'] / z_size, **kwargs)
 
-    ax_zx = divider.append_axes("right", 1.1,
+    ax_zx = divider.append_axes("right", proj_height,
                                 pad=0.2, sharey=ax_xy)
     ax_zx.imshow(z_stack.max(axis=2).T,
                  aspect=xy_size/z_size)

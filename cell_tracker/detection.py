@@ -32,6 +32,11 @@ def inspect_stack(cluster, stack_num=0, show=True):
           'number of unique values: {}\n'
           'infered signal depth: {}'.format(shape, maxI,
                                             n_uniques, depth))
+    if len(shape > 3):
+        print('''Stack doesn't seem to have the correct dimensions, '''
+              '''make sure to apply a preprocessing to correct '''
+              '''this descrepency''')
+
     if show:
         fig, (ax0, ax1) = plt.subplots(2, 1)
         proj_im0 = im0
