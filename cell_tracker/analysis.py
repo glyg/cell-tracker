@@ -131,27 +131,29 @@ class Ellipses():
             curve[2, :] += shift[2]
         return curve
 
-    def max_ellipticity(self, max_val=3.):
+    def max_ellipticity(self, max_val):
         return self.data['ellipticity'].map(lambda x:
                                             x < max_val)
 
-    def min_gof(self, min_val=1.):
+    def min_gof(self, min_val):
         return self.data['gof'].map(lambda x:
                                      x > min_val)
 
-    def max_dtheta(self, max_val=4*np.pi ):
+    def max_dtheta(self, max_val):
+        max_val = max_val * np.pi / 180
         return self.data['dtheta'].map(lambda x:
                                        np.abs(x) < max_val)
 
-    def min_dtheta(self, min_val=np.pi/6):
+    def min_dtheta(self, min_val):
+        min_val = min_val * np.pi / 180
         return self.data['dtheta'].map(lambda x:
                                        np.abs(x) > min_val)
 
-    def max_radius(self, max_val=60):
+    def max_radius(self, max_val):
         return self.data['log_radius'].map(lambda x:
                                            np.exp(x) < max_val)
 
-    def min_radius(self, min_val=5):
+    def min_radius(self, min_val):
         return self.data['log_radius'].map(lambda x:
                                        np.exp(x) > min_val)
 

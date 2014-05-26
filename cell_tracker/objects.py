@@ -201,7 +201,7 @@ class CellCluster:
     def compute_ellipticity(self, size=8,
                             cutoffs=ellipsis_cutoffs,
                             coords=['x_r', 'y_r', 'z_r'], smooth=0):
-
+        size = np.int(size / self.metadata['TimeIncrement'])
         if not hasattr(self, 'ellipses'):
             self.ellipses = {}
         if not hasattr(self, 'interpolated'):

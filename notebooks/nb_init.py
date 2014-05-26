@@ -15,11 +15,8 @@ matplotlib.rcParams['image.interpolation'] = 'nearest'
 matplotlib.rcParams['image.cmap'] = 'gray'
 
 
-import matplotlib.pylab as plt
-
+import matplotlib.pyplot as plt
 
 from mpl_toolkits.mplot3d import Axes3D
-
 from sktracker.trajectories import Trajectories, draw
-import cell_tracker as ct
 
