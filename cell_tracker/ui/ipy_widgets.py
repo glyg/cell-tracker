@@ -59,6 +59,9 @@ class SettingsWidget(widgets.ContainerWidget):
         self.settings = settings
         children = []
         for key in to_display.keys():
+            val = self.settings.get(key)
+            if val is None:
+                continue
             val = self.settings[key]
             descr = to_display[key]
             child = TypeAgnosticTextWidget(key, descr, val)
