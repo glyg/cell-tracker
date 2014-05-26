@@ -23,7 +23,7 @@ from sktracker.io import StackIO, ObjectsIO
 from sktracker.io.utils import load_img_list
 from sktracker.trajectories import Trajectories
 from .. import CellCluster
-from ..conf import default_metadata
+from ..conf import default_metadata, metadata_types
 
 
 __all__ = ['get_from_excel', 'get_cluster', 'get_name']
@@ -63,6 +63,18 @@ def get_from_excel(data_path):
     metadata = pd.read_excel(data_path, 1)
     metadata = {name: value for name, value
                 in zip(metadata['Name'], metadata['Value'])}
+
+    for key, val in metadata.items():
+        dtype = metadata_types[key]
+        if dtype == tuple:
+            tp = val.replace('(', '')
+            tp = tp.replace(')', '')
+            vs = tp.split(',')
+            metadata[key] = tuple(int(v) for v in vs)
+        elif dtype == str:
+            continue
+        else:
+            metadata[key] = dtype(val)
 
     store_path = ''.join(metadata['FileName'].split('.')[:-1]+['.h5'])
     metadata['FileName'] = os.path.join(

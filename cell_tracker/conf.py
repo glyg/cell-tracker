@@ -12,6 +12,19 @@ default_metadata =  {"PhysicalSizeX": 0.42,
                      "Shape": [1, 1, 512, 512],
                      "DimensionOrder": "TZYX" }
 
+metadata_types = {"PhysicalSizeX": np.float,
+                  "PhysicalSizeY": np.float,
+                  "PhysicalSizeZ": np.float,
+                  "TimeIncrement": np.float,
+                  "FileName": str,
+                  "Shape": tuple,
+                  "DimensionOrder": str,
+                  'SizeX': np.int,
+                  'SizeY': np.int,
+                  'SizeZ': np.int,
+                  'SizeC': np.int,
+                  'SizeT': np.int}
+
 defaults['metadata'] = default_metadata
 
 metadata_display = OrderedDict([('PhysicalSizeX',
