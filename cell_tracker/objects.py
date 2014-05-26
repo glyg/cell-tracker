@@ -240,7 +240,15 @@ def build_iterator(stackio, preprocess=None):
     if stackio.image_path_list is not None:
         base_iterator = stackio.list_iterator()
     else:
-        base_iterator = stackio.image_iterator(-2)
+        if stackio.metadata['DimensionOrder'] in ('TCZXY', 'TCIXY',
+                                                  'TCZYX', 'TCIYX'):
+            base_iterator = stackio.image_iterator(-4)
+        elif stackio.metadata['DimensionOrder'] in ('TZXY', 'TZYX', 'TIXY', 'TIYX'):
+            base_iterator = stackio.image_iterator(-3)
+        elif stackio.metadata['DimensionOrder'] in ('TXY', 'TYX', 'IXY', 'IYX'):
+            base_iterator = stackio.image_iterator(-2)
+        else:
+            raise TypeError('Stack organisation not understood')
     if preprocess is None:
         iterator = base_iterator
     else:
