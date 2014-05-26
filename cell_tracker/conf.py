@@ -89,9 +89,9 @@ ellipsis_display = OrderedDict([('max_ellipticity',
                                 ('min_dtheta',
                                  'Minimum angular amplitude (degrees)'),
                                 ('max_radius',
-                                 'Maximum ellipsis radius'),
-                                ('min_dtheta',
-                                 'Minimum ellipsis radius'),
+                                 'Maximum ellipsis radius (µm)'),
+                                ('min_radius',
+                                 'Minimum ellipsis radius (µm)'),
                             ])
 
 defaults['ellipsis_display'] = ellipsis_display

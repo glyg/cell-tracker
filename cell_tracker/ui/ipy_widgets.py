@@ -7,7 +7,8 @@ from __future__ import print_function
 
 import numpy as np
 import collections
-
+import os
+import json
 
 
 from IPython.html import widgets
@@ -15,12 +16,15 @@ from IPython.display import display
 from ..conf import defaults
 
 
-def set_ellipsis_limits(cutoffs=None, to_display=None):
+def set_ellipsis_limits(cutoffs=None, to_display=None,
+                        jsonfile='ellipsis_cutoffs.json'):
+
     if cutoffs is None:
         cutoffs = defaults['ellipsis_cutoffs']
     if to_display is None:
         to_display= defaults['ellipsis_display']
-    smw = SettingsWidget(cutoffs, to_display)
+    smw = SettingsWidget(cutoffs, to_display,
+                         json_io=True, jsonfile=jsonfile)
     display(smw)
 
 
@@ -36,13 +40,15 @@ def set_metadata(metadata=None,
     display(smw)
 
 
-def set_parameters(parameters=None, to_display=None):
+def set_parameters(parameters=None, to_display=None,
+                   jsonfile='detection_paramters.json'):
     if parameters is None:
         parameters = defaults['detection_parameters']
     if to_display is None:
         to_display= defaults['detection_display']
 
-    smw = SettingsWidget(parameters, to_display)
+    smw = SettingsWidget(parameters, to_display,
+                         json_io=True, jsonfile=jsonfile)
     display(smw)
 
 
@@ -50,7 +56,7 @@ class SettingsWidget(widgets.ContainerWidget):
     ''' IPython widget to handle metadata or parameters in a user friendly way
     '''
 
-    def __init__(self, settings, to_display):
+    def __init__(self, settings=None, to_display=None, json_io=False, jsonfile=None):
         '''
         Creates a widget to handle settings
 
@@ -64,7 +70,13 @@ class SettingsWidget(widgets.ContainerWidget):
             that need to be displayed, and the text string to
             appear next to it
         '''
+
         self.settings = settings
+        self.json_io = json_io
+        self.jsonfile = jsonfile
+        if json_io and os.path.isfile(jsonfile):
+            with open(jsonfile, 'r+') as jsfile:
+                self.settings = json.load(jsfile)
         children = []
         for key in to_display.keys():
             val = self.settings.get(key)
@@ -84,6 +96,9 @@ class SettingsWidget(widgets.ContainerWidget):
         """
         for child in self.children:
             self.settings[child.key] = child.value
+        if self.json_io:
+            with open(self.jsonfile, 'w+') as jsfile:
+                json.dump(self.settings, jsfile)
 
     def on_value_change(self, name, value):
         self._update_settings()
