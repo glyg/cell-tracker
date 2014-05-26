@@ -237,11 +237,15 @@ class CellCluster:
 
 def build_iterator(stackio, preprocess=None):
 
+    is_list = False
     if stackio.image_path_list is not None:
+        if len(stackio.image_path_list) > 1:
+            is_list = True
+    if is_list:
         base_iterator = stackio.list_iterator()
     else:
-        if stackio.metadata['DimensionOrder'] in ('TCZXY', 'TCIXY',
-                                                  'TCZYX', 'TCIYX'):
+        if stackio.metadata['DimensionOrder'] in ('TZCXY', 'TICXY',
+                                                  'TZCYX', 'TICYX'):
             base_iterator = stackio.image_iterator(-4)
         elif stackio.metadata['DimensionOrder'] in ('TZXY', 'TZYX', 'TIXY', 'TIYX'):
             base_iterator = stackio.image_iterator(-3)
