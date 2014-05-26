@@ -113,7 +113,7 @@ def get_cluster(default_path='.', metadata=None, single_file=False):
             image_path_list = load_img_list(data_path)
 
     ## Excel
-    elif data_path.endswith('.xslx'):
+    elif data_path.endswith('.xlsx'):
         cellcluster = get_from_excel(data_path)
         return cellcluster
 
