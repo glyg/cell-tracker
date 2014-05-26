@@ -15,6 +15,14 @@ from IPython.display import display
 from ..conf import defaults
 
 
+def set_ellipsis_limits(cutoffs=None, to_display=None):
+    if cutoffs is None:
+        cutoffs = defaults['ellipsis_cutoffs']
+    if to_display is None:
+        to_display= defaults['ellipsis_display']
+    smw = SettingsWidget(cutoffs, to_display)
+    display(smw)
+
 
 def set_metadata(metadata=None,
                  to_display=None):
@@ -28,8 +36,8 @@ def set_metadata(metadata=None,
     display(smw)
 
 
-def set_parameters(paramters=None, to_display=None):
-    if paramters is None:
+def set_parameters(parameters=None, to_display=None):
+    if parameters is None:
         parameters = defaults['detection_parameters']
     if to_display is None:
         to_display= defaults['detection_display']
