@@ -148,6 +148,7 @@ def get_cluster(default_path='.', metadata=None, single_file=False):
                           image_path_list=image_path_list,
                           metadata=metadata)
     cellcluster = CellCluster(objectsio=objectsio, stackio=stackio )
+    cellcluster.trajs = Trajectories(cellcluster.trajs.dropna())
     return cellcluster
 
 def get_dataset(default='.', filter='*.*'):

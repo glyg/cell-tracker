@@ -163,7 +163,7 @@ class CellCluster:
         Performs a principal component analysis on the input data
         '''
         if not df:
-            df = self.trajs
+            df = self.trajs.dropna()
         self.pca = PCA()
         pca_coords = [c + suffix for c in coords]
         if ndims == 2:
