@@ -77,9 +77,9 @@ def get_from_excel(data_path):
         else:
             metadata[key] = dtype(val)
 
-    store_path = ''.join(metadata['FileName'].split('.')[:-1]+['.h5'])
     metadata['FileName'] = os.path.join(
         os.path.dirname(data_path), metadata['FileName'])
+    store_path = ''.join(metadata['FileName'].split('.')[:-1]+['.h5'])
     store_path = os.path.join(
         os.path.dirname(data_path), store_path)
 

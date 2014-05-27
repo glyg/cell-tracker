@@ -98,6 +98,8 @@ class SettingsWidget(widgets.ContainerWidget):
             self.settings[child.key] = child.value
         if self.json_io:
             with open(self.jsonfile, 'w+') as jsfile:
+                print('''Recorded preferences in {}
+                      '''.format(jsfile))
                 json.dump(self.settings, jsfile)
 
     def on_value_change(self, name, value):
