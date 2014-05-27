@@ -201,7 +201,7 @@ class CellCluster:
     def compute_ellipticity(self, size=8,
                             cutoffs=ellipsis_cutoffs,
                             coords=['x_r', 'y_r', 'z_r'], smooth=0):
-        size = np.int(size / self.metadata['TimeIncrement'])
+        cor_size = np.int(size / self.metadata['TimeIncrement'])
         if not hasattr(self, 'ellipses'):
             self.ellipses = {}
         if not hasattr(self, 'interpolated'):
@@ -209,9 +209,10 @@ class CellCluster:
                                                             s=smooth)
 
         grouped = self.interpolated.groupby(level='label')
-        self.ellipses[size] = grouped.apply(evaluate_ellipticity,
-                                            size=size, cutoffs=cutoffs,
-                                            coords=coords)
+        _ellipses = grouped.apply(evaluate_ellipticity,
+                                  size=cor_size, cutoffs=cutoffs,
+                                  coords=coords)
+        self.ellipses[size] = _ellipses.sortlevel(level='t_stamp')
         self.oio['ellipses_%i' %size] = self.ellipses[size]
 
     def detect_rotations(self, cutoffs):
@@ -229,11 +230,15 @@ class CellCluster:
                                     'dtheta', 'good', 'size']].astype(np.float)
                       for ellipsis in self.ellipses.values()]).dropna()
         data = data.replace([np.inf, -np.inf], np.nan).dropna()
-        data = data.swaplevel('t_stamp', 'label')
         data.sort_index(axis=0, inplace=True)
         data.sort_index(axis=1, inplace=True)
-        self.detected_rotations = self.trajs.groupby(
+        detected_rotations = self.trajs.groupby(
             level='label').apply(get_segment_rotations, data)
+        detected_rotations = detected_rotations.stack()
+        detected_rotations = detected_rotations.swaplevel('label', 't_stamp')
+        detected_rotations = detected_rotations.sortlevel(level='label')
+        self.detected_rotations = detected_rotations.sortlevel(level='t_stamp')
+        self.trajs['detected_rotations'] = self.detected_rotations
 
 def build_iterator(stackio, preprocess=None):
 
@@ -275,7 +280,7 @@ def get_segment_rotations(segment, data):
     except KeyError:
         detected_rotations[:] = np.nan
         return detected_rotations
-    sub_time = sub_data.index.values
+
     sizes = data['size'].unique()
 
     for size in sizes:

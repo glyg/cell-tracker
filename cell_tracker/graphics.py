@@ -239,7 +239,7 @@ def plot_rotation_events(cluster, ax=None,
         n_labels = cluster.trajs.labels.size
 
         for label in cluster.trajs.labels:
-            sub_dr = cluster.detected_rotations.loc[label]
+            sub_dr = cluster.detected_rotations.xs(label, level='label')
             color = colors[label]
             ts = sub_dr.index.values
             ts *= cluster.metadata['TimeIncrement']
