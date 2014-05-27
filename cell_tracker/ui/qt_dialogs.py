@@ -79,7 +79,11 @@ def get_from_excel(data_path):
 
     metadata['FileName'] = os.path.join(
         os.path.dirname(data_path), metadata['FileName'])
-    store_path = ''.join(metadata['FileName'].split('.')[:-1]+['.h5'])
+    store_path = metadata['FileName']
+    if '.' in store_path[-6:]:
+        store_path = ''.join(store_path.split('.')[:-1]+['.h5'])
+    else:
+        store_path = store_path+'.h5'
     store_path = os.path.join(
         os.path.dirname(data_path), store_path)
 
