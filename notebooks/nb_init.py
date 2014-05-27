@@ -7,6 +7,8 @@ from __future__ import print_function
 
 import numpy as np
 import pandas as pd
+import IPython.display as display
+
 
 import matplotlib
 matplotlib.rcParams['backend'] = 'Qt4Agg'

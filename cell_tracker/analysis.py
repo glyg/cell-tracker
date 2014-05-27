@@ -95,7 +95,7 @@ class Ellipses():
             self.data[['a', 'b']].abs().sum(axis=1) / 2.)
 
         rad2deg = 180 * np.pi
-        self.data['dtheta'] = self.data['omega'] * self.size * rad2deg
+        self.data['dtheta'] = self.data['omega'] * self.size
 
         self.data['good'] =  np.zeros(self.data.shape[0])
         goods = self.good_indices(cutoffs)

@@ -163,7 +163,7 @@ class CellCluster:
         Performs a principal component analysis on the input data
         '''
         if not df:
-            df = self.trajs.dropna()
+            df = self.trajs
         self.pca = PCA()
         pca_coords = [c + suffix for c in coords]
         if ndims == 2:
@@ -182,6 +182,7 @@ class CellCluster:
         Computes the angle of each cell with respect to the cluster center
 
         '''
+        self.trajs = Trajectories(self.trajs.dropna())
         self.do_pca(coords=['x_r', 'y_r', 'z_r'])
         self.trajs['theta'] = np.arctan2(self.trajs['y_r_pca'],
                                          self.trajs['x_r_pca'])
