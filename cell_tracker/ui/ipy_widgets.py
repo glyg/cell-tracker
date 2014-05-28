@@ -25,7 +25,7 @@ def set_ellipsis_limits(cutoffs=None, to_display=None,
         to_display= defaults['ellipsis_display']
     smw = SettingsWidget(cutoffs, to_display,
                          json_io=True, jsonfile=jsonfile)
-    display(smw)
+    return smw
 
 
 def set_metadata(metadata=None,
@@ -37,7 +37,7 @@ def set_metadata(metadata=None,
         to_display= defaults['metadata_display']
 
     smw = SettingsWidget(metadata, to_display)
-    display(smw)
+    return smw
 
 
 def set_parameters(parameters=None, to_display=None,
@@ -49,7 +49,7 @@ def set_parameters(parameters=None, to_display=None,
 
     smw = SettingsWidget(parameters, to_display,
                          json_io=True, jsonfile=jsonfile)
-    display(smw)
+    return smw
 
 
 class SettingsWidget(widgets.ContainerWidget):
@@ -77,6 +77,7 @@ class SettingsWidget(widgets.ContainerWidget):
         if json_io and os.path.isfile(jsonfile):
             with open(jsonfile, 'r+') as jsfile:
                 self.settings = json.load(jsfile)
+            print('Loaded settings from {}'.format(jsonfile))
         children = []
         for key in to_display.keys():
             val = self.settings.get(key)
@@ -95,11 +96,12 @@ class SettingsWidget(widgets.ContainerWidget):
 
         """
         for child in self.children:
+            print('Updated settings')
             self.settings[child.key] = child.value
         if self.json_io:
             with open(self.jsonfile, 'w+') as jsfile:
                 print('''Recorded preferences in {}
-                      '''.format(jsfile))
+                      '''.format(self.jsonfile))
                 json.dump(self.settings, jsfile)
 
     def on_value_change(self, name, value):

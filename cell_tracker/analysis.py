@@ -17,6 +17,19 @@ from .conf import defaults
 
 ellipsis_cutoffs = defaults['ellipsis_cutoffs']
 
+def scale(trajs, pix_sizex, pix_sizey,
+          pix_sizez, inplace=False):
+
+    out_trajs = trajs if inplace else trajs.copy()
+    if pix_sizey == None:
+        out_trajs[['x', 'y']] = trajs[['x', 'y']] * pix_sizex
+    else:
+        out_trajs['x'] = trajs['x'] * pix_sizex
+        out_trajs['y'] = trajs['y'] * pix_sizey
+    out_trajs['z'] = trajs['z'] * pix_sizez
+    return out_trajs
+
+
 class Ellipses():
 
     def __init__(self, size=0,
@@ -52,37 +65,32 @@ class Ellipses():
                           % (self.size, self.segment.shape[0]))
             self.data['gof'] = - np.inf
             self.data['log_radius'] = -np.inf
-
             self.data['dtheta'] = 0.
             self.data['good'] =  np.zeros(self.data.shape[0])
             return self.data
 
-        idxs = self.segment.index.get_level_values(level='t_stamp')
-        last = np.where(idxs > idxs[-1] - self.size)[0][0]
+        t_stamps = self.segment.index.get_level_values(level='t_stamp')
+        last = np.where(t_stamps > (t_stamps[-1] - self.size))[0][0]
 
-        for i, idx in enumerate(self.segment.index[:last]):
+        for i, idx in enumerate(t_stamps[:last]):
             start = idx
-            try:
-                search_idx = idx[1]
-            except:
-                search_idx = idx
-
-            stop = self.segment.index[idxs <= search_idx + self.size][-1]
+            stop = t_stamps[t_stamps <= start + self.size][-1]
             lstsq, components = fit_arc_ellipse(self.segment,
                                                 start, stop,
                                                 self.coords)
             if lstsq is None:
+                print('''Fitting failed between {} and {} '''.format(start, stop))
                 continue
             params = lstsq[0]
-            midle = self.segment.index[i + self.size//2]
+            midle = t_stamps[t_stamps <= start + self.size//2][-1]
             a, b = params[:2]
             a, b = np.abs(a), np.abs(b)
             a, b = np.max((a, b)), np.min((a, b))
             self.data.loc[midle]['ellipticity'] = a / b
             for n, p in zip(param_names, params):
                 self.data.loc[midle][n] = p
-                self.data.loc[midle]['chi2'] = (np.sum(lstsq[2]['fvec']**2)
-                                                / self.size**2)
+            fvec = lstsq[2]['fvec']
+            self.data.loc[midle]['chi2'] = np.sum(fvec**2) / fvec.size
             r0 = components[0, :]
             r1 = components[1, :]
             for n, r in zip(plane_components[:3], r0):
@@ -93,8 +101,6 @@ class Ellipses():
         self.data['gof'] = - np.log(self.data['chi2'].astype(np.float))
         self.data['log_radius'] = np.log(
             self.data[['a', 'b']].abs().sum(axis=1) / 2.)
-
-        rad2deg = 180 * np.pi
         self.data['dtheta'] = self.data['omega'] * self.size
 
         self.data['good'] =  np.zeros(self.data.shape[0])
@@ -177,32 +183,39 @@ class Ellipses():
 
 
 def fit_arc_ellipse(segment, start, stop,
-                    coords=['x_r', 'y_r', 'z_r']):
+                    coords=['x_r', 'y_r', 'z_r'],
+                    return_rotated=False):
 
     pca = PCA()
-    sub_segment = segment[coords].loc[start:stop]
+    sub_segment = segment[coords+['t']].loc[start:stop]
     if sub_segment.shape[0] < 4:
         warnings.warn('''Not enough points to fit an ellipse''')
-        return None, None
-    rotated = pca.fit_transform(sub_segment)
-    center = np.array([0 for c in coords])
-    r_center = pca.transform(center)[0]
-    for n, coord in enumerate(coords):
-        rotated[:, n] = rotated[:, n] - r_center[n]
+        raise ValueError('''Not enough points to fit an ellipse''')
+        #return None, None
+    rotated = pca.fit_transform(sub_segment[coords])
 
     components = pca.components_
     to_fit = pd.DataFrame(data=rotated, index=sub_segment.index,
                           columns=('x', 'y', 'z'))
+    to_fit['t'] = sub_segment['t']
     # initial guesses
     a0 = to_fit['x'].ptp()
     b0 = to_fit['y'].ptp()
-    omega0 = 1.#segment['ang_speed'+'_'.join(coords)].loc[start:stop].mean()
+
+    thetas = np.arctan2(to_fit['y'], to_fit['y'])
+    dtheta0 = thetas.iloc[-1] - thetas.iloc[0]
+    t_span = to_fit['t'].iloc[-1] - to_fit['t'].iloc[0]
+
+    omega0 = dtheta0 / t_span
     phi_x0 = phi_y0 = 0.
     x00, y00 = to_fit.max(axis=0)[['x', 'y']]
 
     params0 = a0, b0, omega0, phi_x0, phi_y0, x00, y00
     lstsq = leastsq(arc_residuals, params0, args=(to_fit, ), full_output=1)
-    return lstsq, components
+    if return_rotated:
+        return lstsq, components, to_fit
+    else:
+        return lstsq, components
 
 def arc_ellipse(t, params):
 
@@ -215,8 +228,39 @@ def arc_ellipse(t, params):
 
 def arc_residuals(params, data):
 
-    times = np.asarray(data.index.get_level_values('t_stamp'), dtype=np.float)
+    times = data['t'].values
     fit_x, fit_y = arc_ellipse(times, params)
     res_x = fit_x - data['x'].values
     res_y = fit_y - data['y'].values
     return np.hstack((res_y, res_x))
+
+### Should move to tests
+
+def get_mock_segment(radius=30, dtheta=4*np.pi/3,
+                     ellipticity=1.5, noise=1e-4, t_span=90, t_step=3):
+
+    a = radius * ellipticity
+    b = radius / ellipticity
+
+    omega = dtheta/t_span
+
+    phi_x, phi_y, x0, y0 = 0, 0, 0, 0
+
+    params = a, b, omega, phi_x, phi_y, x0, y0
+    ts = np.arange(0, t_span, t_step)
+    t_stamps = ts / t_step
+    t_stamps = t_stamps.astype(np.int)
+
+    x, y = arc_ellipse(ts, params)
+    z = np.ones(x.size)
+    x_err = np.random.normal(scale=noise*radius, size=x.size)
+    y_err = np.random.normal(scale=noise*radius, size=x.size)
+    x += x_err
+    y += y_err
+
+    segment = pd.DataFrame(index=pd.Index(t_stamps, name='t_stamp'),
+                           data=np.vstack([x, y, z, x_err, y_err, ts]).T,
+                           columns=['x', 'y', 'z', 'x_err', 'y_err', 't'])
+    return segment
+
+

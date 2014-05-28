@@ -25,6 +25,114 @@ from sktracker.trajectories import draw
 from .analysis import Ellipses
 from .objects import build_iterator
 
+def _scatter_single_segment(cluster, label, sizes, color, axes=None):
+
+    symbols = 'svD+^od'
+    symbols = {size: symbol for size, symbol in zip(sizes, symbols)}
+
+    if axes is None:
+        fig, axes = plt.subplots(2, 2, sharex='col',
+                                sharey='row', figsize=(12, 12))
+
+    for size in sizes:
+        ellipsis_df = cluster.ellipses[size].xs(label, level='label').dropna()
+        gof = ellipsis_df['gof'].astype(np.float)
+        gof_size = 50 * (gof - gof.min()) / gof.ptp()
+
+        ellipticities = ellipsis_df['ellipticity'].astype(np.float)
+        radius = np.exp(ellipsis_df['log_radius'].astype(np.float))
+        rad_size = 50 * (np.log(radius) - np.log(radius.min())) / np.log(radius.max())
+        dtheta = ellipsis_df['dtheta'].astype(np.float) * 180 / np.pi
+
+        axes[0, 0].scatter(gof, ellipticities,
+                           c=color, marker=symbols[size],
+                           alpha=0.5, s=rad_size)
+        #axes[0, 0].plot([gof.min(), cutoffs['gof']
+        axes[1, 0].scatter(gof, radius,
+                           c=color, marker=symbols[size],
+                           s= 50 / ellipticities , alpha=0.5)
+        axes[0, 1].scatter(np.abs(dtheta), ellipticities,
+                           c=color, marker=symbols[size],
+                           alpha=0.5, s=gof_size)
+        axes[1, 1].scatter(np.abs(dtheta), radius,
+                           c=color, marker=symbols[size],
+                           alpha=0.5, s=gof_size)
+
+
+
+def show_ellipses_clusters(cluster, sizes, cutoffs):
+
+    fig, axes = plt.subplots(2, 2, sharex='col',
+                            sharey='row', figsize=(12, 12))
+
+    colors = cluster.trajs.get_colors()
+    for label in cluster.trajs.labels:
+        color = colors[label]
+        _scatter_single_segment(cluster, label, sizes, color, axes=axes)
+    ### goodness of fit vs ellipticity
+
+    ax = axes[0, 0]
+
+    gof_cut = cutoffs['min_gof']
+    ell_cut_max = cutoffs['max_ellipticity']
+
+    ax.axvline(gof_cut, c='r',
+                    lw=2, alpha=0.5)
+
+    ax.axhline(ell_cut_max, c='k',
+                    lw=2, alpha=0.5)
+
+
+    ax.set_ylabel('Ellipticity')
+    ax.set_title('Size: Avg radius', fontsize=12)
+    ax.set_xlim(-1, 4)
+    ax.set_ylim(0, 5)
+
+
+    ### goodness of fit vs radius
+    ax = axes[1, 0]
+
+    rad_cut_min = cutoffs['min_radius']
+    rad_cut_max = cutoffs['max_radius']
+
+    ax.axvline(gof_cut, c='k',
+                    lw=2, alpha=0.5)
+    ax.axhline(rad_cut_min, c='k',
+                    lw=2, alpha=0.5)
+    ax.axhline(rad_cut_max, c='k',
+                    lw=2, alpha=0.5)
+    ax.set_xlabel('Goodness of fit')
+    ax.set_ylabel('Average radius')
+    ax.set_title('Size : 1/Ellipticity', fontsize=12)
+    ax.set_yscale('log')
+    axes[1, 1].set_yscale('log')
+    axes[1, 0].set_ylim(0, 20)
+
+    ### dtheta vs ellipticity
+    ang_cut_min = cutoffs['min_dtheta']
+    ang_cut_max = cutoffs['max_dtheta']
+
+    ax = axes[0, 1]
+    ax.axhline(ell_cut_max, c='k',
+               lw=2, alpha=0.5)
+    ax.axvline(ang_cut_min, c='k',
+                    lw=2, alpha=0.5)
+    ax.axvline(ang_cut_max, c='k',
+                    lw=2, alpha=0.5)
+    axes[0, 1].set_title('Size : Goodness of fit', fontsize=12)
+
+    ## dtheta vs radius
+    ax = axes[1, 1]
+    ax.axhline(rad_cut_min, c='k',
+                    lw=2, alpha=0.5)
+    ax.axhline(rad_cut_max, c='k',
+                    lw=2, alpha=0.5)
+    ax.axvline(ang_cut_min, c='k',
+                    lw=2, alpha=0.5)
+    ax.axvline(ang_cut_max, c='k',
+                    lw=2, alpha=0.5)
+    axes[1, 1].set_xlabel('Angular aperture')
+    #axes[1, 1].set_xlim(0, 1.)
 
 
 def show_one_stack_output(stack, one_stack_output):
@@ -324,6 +432,8 @@ def show_ellipses(cluster, label, size,
 
     for idx in ellipses.good_indices(cutoffs):
         curve = ellipses.evaluate(idx)
+        if curve is None:
+            continue
         axes[0, 0].plot(curve[0, :], curve[1, :], **plot_kwargs)
         axes[0, 1].plot(curve[2, :], curve[1, :], **plot_kwargs)
         axes[1, 0].plot(curve[0, :], curve[2, :], **plot_kwargs)
