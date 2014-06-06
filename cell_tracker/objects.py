@@ -25,7 +25,7 @@ ellipsis_cutoffs = defaults['ellipsis_cutoffs']
 default_metadata = defaults['metadata']
 
 from .analysis import Ellipses
-
+from .utils import continuous_theta
 
 
 class CellCluster:
@@ -190,7 +190,7 @@ class CellCluster:
                                      self.trajs['x_r_pca'])
 
         grouped = self.trajs.groupby(level='label', as_index=False)
-        tmp_trajs = grouped.apply(continuous_theta)
+        tmp_trajs = grouped.apply(continuous_theta_)
         tmp_trajs = tmp_trajs.sortlevel('t_stamp')
         self.trajs = Trajectories(tmp_trajs)
         self.theta_bin_count, self.theta_bins = np.histogram(
@@ -225,12 +225,12 @@ class CellCluster:
             ellipsis.data['good'] =  np.zeros(ellipsis.data.shape[0])
             goods = ellipsis.good_indices(cutoffs)
             if len(goods):
-                ellipsis.data['good'].loc[goods] = 1.
-            ellipsis.data['size'] = size
+                ellipsis_df.loc[goods, 'good'] = 1.
+            ellipsis_df['size'] = size
 
-        data = pd.concat([ellipsis[['gof', 'log_radius',
-                                    'dtheta', 'good', 'size']].astype(np.float)
-                      for ellipsis in self.ellipses.values()]).dropna()
+        data = pd.concat([ellipsis_df[['gof', 'radius',
+                                       'dtheta', 'good', 'size']].astype(np.float)
+                          for ellipsis_df in self.ellipses.values()]).dropna()
         data = data.replace([np.inf, -np.inf], np.nan).dropna()
         data.sort_index(axis=0, inplace=True)
         data.sort_index(axis=1, inplace=True)
@@ -240,7 +240,7 @@ class CellCluster:
         detected_rotations = detected_rotations.swaplevel('label', 't_stamp')
         detected_rotations = detected_rotations.sortlevel(level='label')
         self.detected_rotations = detected_rotations.sortlevel(level='t_stamp')
-        self.trajs['detected_rotations'] = self.detected_rotations
+
 
 def build_iterator(stackio, preprocess=None):
 
@@ -278,7 +278,7 @@ def get_segment_rotations(segment, data):
                                    index=pd.Index(np.arange(t0, t1), name='t_stamp'),
                                    name='detected_rotations')
     try:
-        sub_data = data.loc[label]
+        sub_data = data.xs(label, level='label')
     except KeyError:
         detected_rotations[:] = np.nan
         return detected_rotations
@@ -304,18 +304,12 @@ def evaluate_ellipticity(segment, **kwargs):
     ellipses = Ellipses(segment=segment, **kwargs).data
     return ellipses
 
-
-def continuous_theta(segment):
+def continuous_theta_(segment):
     '''
     Computes a continuous angle from a 2*np.pi periodic one
     '''
-    if segment.shape[0] == 1:
-        segment['dtheta'] = 0
-        return segment
-    theta0 =  segment['theta'].iloc[0]
-    segment['dtheta'] = segment['theta'].diff()
-    segment['dtheta'].iloc[0] = 0
-    segment['dtheta'][segment['dtheta'] > np.pi] -= 2 * np.pi
-    segment['dtheta'][segment['dtheta'] < - np.pi] += 2 * np.pi
-    segment['theta'] = segment['dtheta'].cumsum() + theta0
+    dthetas, thetas = continuous_theta(segment.theta.values)
+    segment['dtheta'] = dthetas
+    segment['theta'] = thetas
     return segment
+

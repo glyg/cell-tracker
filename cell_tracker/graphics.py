@@ -40,7 +40,7 @@ def _scatter_single_segment(cluster, label, sizes, color, axes=None):
         gof_size = 50 * (gof - gof.min()) / gof.ptp()
 
         ellipticities = ellipsis_df['ellipticity'].astype(np.float)
-        radius = np.exp(ellipsis_df['log_radius'].astype(np.float))
+        radius = ellipsis_df['radius'].astype(np.float)
         rad_size = 50 * (np.log(radius) - np.log(radius.min())) / np.log(radius.max())
         dtheta = ellipsis_df['dtheta'].astype(np.float) * 180 / np.pi
 
