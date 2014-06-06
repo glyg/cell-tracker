@@ -371,17 +371,10 @@ def plot_rotation_events(cluster, ax=None,
 
 
 def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
+                         scatter_kw={}, line_kw={},
+                         ellipsis_kw={},
                          savefile=None, axes=None, ax_3d=None):
-    colors = cluster.trajs.get_colors()
     segment = cluster.trajs.get_segments()[label]
-    scatter_kw = {'c':segment.t.astype(np.float),
-                  'cmap':'spectral',
-                  's':40,
-                  'alpha':0.8,
-                  'edgecolors':'none'}
-    line_kw = {'c':'gray',#tracker.label_colors[label],
-               'ls':'-',
-               'alpha':0.8, 'lw':0.75}
     coords=['x_r', 'y_r', 'z_r']
     axes, ax_3d = draw.show_4panels(cluster.trajs, label,
                                     axes=axes, ax_3d=ax_3d,
@@ -393,7 +386,7 @@ def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
                                     cutoffs=cutoffs,
                                     coords=coords,
                                     axes=axes, ax_3d=ax_3d,
-                                    alpha=1., lw=2., c='r')
+                                    alpha=0.5, lw=1., c='r')
 
     for ax in axes.flatten():
         ax.plot([0], [0], 'k+', ms=20)
@@ -434,10 +427,10 @@ def show_ellipses(cluster, label, size,
         curve = ellipses.evaluate(idx)
         if curve is None:
             continue
-        axes[0, 0].plot(curve[0, :], curve[1, :], **plot_kwargs)
-        axes[0, 1].plot(curve[2, :], curve[1, :], **plot_kwargs)
-        axes[1, 0].plot(curve[0, :], curve[2, :], **plot_kwargs)
-        ax_3d.plot(curve[0, :], curve[1, :], curve[2, :], **plot_kwargs)
+        axes[0, 0].plot(curve[:, 0], curve[:, 1], **plot_kwargs)
+        axes[0, 1].plot(curve[:, 2], curve[:, 1], **plot_kwargs)
+        axes[1, 0].plot(curve[:, 0], curve[:, 2], **plot_kwargs)
+        ax_3d.plot(curve[:, 0], curve[:, 1], curve[:, 2], **plot_kwargs)
     return axes, ax_3d
 
 def show_n_panels(cluster, thumbs, time0,

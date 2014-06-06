@@ -89,8 +89,8 @@ class Ellipses():
                                                               start, stop, self.coords,
                                                               return_rotated=True)
             if fit_output[-1] not in (1, 2, 3, 4):
-                log.warning('''Fitting failed between {} and {} '''.format(start, stop))
-                log.warning(fit_output[-2])
+                log.debug('''Fitting failed between {} and {} '''.format(start, stop))
+                log.debug(fit_output[-2])
                 continue
             params = fit_output[0]
             a, b, phi_x, phi_y, x0, y0 = params
@@ -111,8 +111,8 @@ class Ellipses():
             thetas = np.arctan2(rotated.x.values - x0,
                                 rotated.y.values - x0)
             dthetas, thetas = continuous_theta(thetas)
-            self.data.loc[midle, 'theta_i'] = thetas.min()
-            self.data.loc[midle, 'theta_f'] = thetas.max()
+            self.data.loc[midle, 'theta_i'] = thetas[0]
+            self.data.loc[midle, 'theta_f'] = thetas[-1]
             self.data.loc[midle, 'dtheta'] = thetas.ptp()
 
         self.data['gof'] = - np.log(self.data['chi2'].astype(np.float))
@@ -129,9 +129,7 @@ class Ellipses():
 
 
         sub_data = self.data.loc[idx]
-
         start, stop = sub_data[['start', 'stop']].astype(np.int)
-
         thetas = np.linspace(sub_data.theta_i,
                              sub_data.theta_f,
                              self.size*sampling)
@@ -141,11 +139,12 @@ class Ellipses():
         xs = rhos * np.cos(thetas) + sub_data.x0
         ys = rhos * np.sin(thetas) + sub_data.y0
         zs = np.zeros_like(rhos)
-
         segdata = self.segment.loc[start:stop][self.coords]
         pca = PCA()
         pca.fit(segdata)
         ellipsis_fit = pca.inverse_transform(np.vstack((xs, ys, zs)).T)
+        avg_zed = self.segment.loc[start:stop][self.coords[-1]].mean()
+        ellipsis_fit[:, 2] += avg_zed
         return ellipsis_fit
 
     def max_ellipticity(self, max_val):
