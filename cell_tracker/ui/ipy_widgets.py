@@ -11,6 +11,10 @@ import os
 import json
 
 
+import logging
+log = logging.getLogger(__name__)
+
+
 from IPython.html import widgets
 from IPython.display import display
 from ..conf import defaults
@@ -77,8 +81,14 @@ class SettingsWidget(widgets.ContainerWidget):
         if json_io and os.path.isfile(jsonfile):
             with open(jsonfile, 'r+') as jsfile:
                 self.settings = json.load(jsfile)
-            print('Loaded settings from {}'.format(jsonfile))
-        children = []
+            log.info('Loaded settings from {}'.format(jsonfile))
+
+            save_button = widgets.ButtonWidget(description='Save settings')
+            save_button.settings = self.settings
+            save_button.jsonfile = jsonfile
+            save_button.on_click(save_click_handler)
+
+        children = [save_button]
         for key in to_display.keys():
             val = self.settings.get(key)
             if val is None:
@@ -96,16 +106,23 @@ class SettingsWidget(widgets.ContainerWidget):
 
         """
         for child in self.children:
-            print('Updated settings')
-            self.settings[child.key] = child.value
-        if self.json_io:
-            with open(self.jsonfile, 'w+') as jsfile:
-                print('''Recorded preferences in {}
-                      '''.format(self.jsonfile))
-                json.dump(self.settings, jsfile)
+            try :
+                log.debug('Updated settings')
+                self.settings[child.key] = child.value
+            except AttributeError:
+                continue
 
     def on_value_change(self, name, value):
         self._update_settings()
+
+
+def save_click_handler(widget):
+
+    with open(widget.jsonfile, 'w+') as jsfile:
+        print('''Recorded preferences in {}
+              '''.format(os.path.abspath(widget.jsonfile)))
+        json.dump(widget.settings, jsfile)
+
 
 
 class TypeAgnosticTextWidget(widgets.ContainerWidget):
