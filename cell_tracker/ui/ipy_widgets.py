@@ -78,17 +78,17 @@ class SettingsWidget(widgets.ContainerWidget):
         self.settings = settings
         self.json_io = json_io
         self.jsonfile = jsonfile
+        children = []
         if json_io and os.path.isfile(jsonfile):
             with open(jsonfile, 'r+') as jsfile:
                 self.settings = json.load(jsfile)
             log.info('Loaded settings from {}'.format(jsonfile))
-
             save_button = widgets.ButtonWidget(description='Save settings')
             save_button.settings = self.settings
             save_button.jsonfile = jsonfile
             save_button.on_click(save_click_handler)
+            children = [save_button]
 
-        children = [save_button]
         for key in to_display.keys():
             val = self.settings.get(key)
             if val is None:
