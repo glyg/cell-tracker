@@ -36,6 +36,8 @@ def _scatter_single_segment(cluster, label, sizes, color, axes=None):
 
     for size in sizes:
         ellipsis_df = cluster.ellipses[size].xs(label, level='label').dropna()
+        if ellipsis_df.empty:
+            continue
         gof = ellipsis_df['gof'].astype(np.float)
         gof_size = 50 * (gof - gof.min()) / gof.ptp()
 
@@ -374,7 +376,7 @@ def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
                          scatter_kw={}, line_kw={},
                          ellipsis_kw={},
                          savefile=None, axes=None, ax_3d=None):
-    segment = cluster.trajs.get_segments()[label]
+
     coords=['x_r', 'y_r', 'z_r']
     axes, ax_3d = draw.show_4panels(cluster.trajs, label,
                                     axes=axes, ax_3d=ax_3d,
@@ -412,16 +414,10 @@ def show_ellipses(cluster, label, size,
             ax.set_aspect('equal')
         axes[1, 1].axis('off')
         ax_3d = fig.add_subplot(224, projection='3d')
-    try:
-        ellipses = Ellipses(size=size,
-                            segment=cluster.interpolated.xs(label,
-                                                            level='label'),
-                            data=cluster.ellipses[size].xs(label,
-                                                           level='label'),
-                            coords=list(coords))
-    except KeyError:
-        raise
-        #return axes, ax_3d
+    ellipses = Ellipses(size=size,
+                        segment=cluster.trajs.get_segments()[label],
+                        data=cluster.ellipses[size].xs(label, level='label'),
+                        coords=list(coords))
 
     for idx in ellipses.good_indices(cutoffs):
         curve = ellipses.evaluate(idx)

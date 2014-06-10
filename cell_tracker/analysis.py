@@ -66,7 +66,7 @@ class Ellipses():
 
         self.data = pd.DataFrame(index=self.segment.index,
                                  columns=columns, dtype=np.float)
-        if self.size > self.segment.shape[0]:
+        if self.size > self.segment.t.ptp():
             warnings.warn('window size (%i) too big'
                           ' for segment with size %i\n'
                           % (self.size, self.segment.shape[0]))
@@ -76,20 +76,23 @@ class Ellipses():
             self.data['good'] =  np.zeros(self.data.shape[0])
             return self.data
 
-        t_stamps = self.segment.index.get_level_values(level='t_stamp')
-        last = np.where(t_stamps > (t_stamps[-1] - self.size))[0][0]
+        times  = self.segment.t
+        indices = times[times < times.iloc[-1] - self.size].index
 
-        for i, idx in enumerate(t_stamps[:last]):
-            start = idx
-            midle = t_stamps[t_stamps <= start + self.size//2][-1]
-            stop = t_stamps[t_stamps <= start + self.size][-1]
+        #last = np.where(t_stamps > (t_stamps[-1] - self.size))[0][0]
+
+        for idx in indices:
+            start = idx[0]
+            midle = times[times <= times.loc[idx] + self.size/2].index[-1][0]
+            stop = times[times <= times.loc[idx] + self.size].index[-1][0]
             self.data.loc[midle, 'start'] = start
             self.data.loc[midle, 'stop'] = stop
             fit_output, components, rotated = fit_arc_ellipse(self.segment,
                                                               start, stop, self.coords,
                                                               return_rotated=True)
             if fit_output[-1] not in (1, 2, 3, 4):
-                log.debug('''Fitting failed between {} and {} '''.format(start, stop))
+                log.debug(
+                    '''Fitting failed between {} and {} '''.format(start, stop))
                 log.debug(fit_output[-2])
                 continue
             params = fit_output[0]
@@ -108,8 +111,8 @@ class Ellipses():
                 self.data.loc[midle, n] = r
             for n, r in zip(plane_components[3:], r1):
                 self.data.loc[midle, n] = r
-            thetas = np.arctan2(rotated.x.values - x0,
-                                rotated.y.values - x0)
+            thetas = np.arctan2(rotated.y.values - x0,
+                                rotated.x.values - x0)
             dthetas, thetas = continuous_theta(thetas)
             self.data.loc[midle, 'theta_i'] = thetas[0]
             self.data.loc[midle, 'theta_f'] = thetas[-1]
@@ -129,6 +132,9 @@ class Ellipses():
 
 
         sub_data = self.data.loc[idx]
+        if not np.all(np.isfinite(sub_data)):
+            return
+
         start, stop = sub_data[['start', 'stop']].astype(np.int)
         thetas = np.linspace(sub_data.theta_i,
                              sub_data.theta_f,
@@ -144,7 +150,7 @@ class Ellipses():
         pca.fit(segdata)
         ellipsis_fit = pca.inverse_transform(np.vstack((xs, ys, zs)).T)
         avg_zed = self.segment.loc[start:stop][self.coords[-1]].mean()
-        ellipsis_fit[:, 2] += avg_zed
+        ellipsis_fit[:, 2] += avg_zed - ellipsis_fit[:, 2].mean()
         return ellipsis_fit
 
     def max_ellipticity(self, max_val):

@@ -56,6 +56,7 @@ class CellCluster:
         except KeyError:
             pass
         self._complete_metadata()
+        self._get_ellipses()
 
     def _complete_metadata(self):
         shape = self.metadata['Shape']
@@ -77,6 +78,14 @@ class CellCluster:
     def metadata(self):
         return self.oio.metadata
 
+    def _get_ellipses(self):
+
+        self.ellipses = {}
+        for key in self.oio.keys():
+            if 'ellipses' in key:
+                size = np.int(key.split('_')[-1])
+                self.ellipses[size] = self.oio[key]
+
     def get_z_stack(self, stack_num):
         """
         Returns the z stack at the time stamp
@@ -92,6 +101,9 @@ class CellCluster:
         if len(z_stack.shape) == 2:
             z_stack = z_stack[np.newaxis, ...]
         return z_stack
+
+    def save_trajs(self):
+        self.oio['trajs'] = self.trajs
 
     def get_center(self, coords=['x', 'y', 'z'], smooth=0,
                    append=True, relative=True):
@@ -201,18 +213,14 @@ class CellCluster:
 
     def compute_ellipticity(self, size=8,
                             cutoffs=ellipsis_cutoffs,
-                            coords=['x_r', 'y_r', 'z_r'], smooth=0):
+                            coords=['x_r', 'y_r', 'z_r']):
 
-        cor_size = np.int(size / self.metadata['TimeIncrement'])
+        #cor_size = np.int(size / self.metadata['TimeIncrement'])
         if not hasattr(self, 'ellipses'):
             self.ellipses = {}
-        if not hasattr(self, 'interpolated'):
-            self.interpolated = self.trajs.time_interpolate(coords=coords,
-                                                            s=smooth)
-
-        grouped = self.interpolated.groupby(level='label')
+        grouped = self.trajs.groupby(level='label')
         _ellipses = grouped.apply(evaluate_ellipticity,
-                                  size=cor_size, cutoffs=cutoffs,
+                                  size=size, cutoffs=cutoffs,
                                   coords=coords)
         self.ellipses[size] = _ellipses.sortlevel(level='t_stamp')
         self.oio['ellipses_%i' %size] = self.ellipses[size]
@@ -228,7 +236,7 @@ class CellCluster:
                 ellipsis_df.loc[goods, 'good'] = 1.
             ellipsis_df['size'] = size
 
-        data = pd.concat([ellipsis_df[['gof', 'radius',
+        data = pd.concat([ellipsis_df[['start', 'stop', 'gof', 'radius',
                                        'dtheta', 'good', 'size']].astype(np.float)
                           for ellipsis_df in self.ellipses.values()]).dropna()
         data = data.replace([np.inf, -np.inf], np.nan).dropna()
@@ -291,15 +299,16 @@ def get_segment_rotations(segment, data):
         if good.shape[0] == 0:
             continue
         else:
-            for t in good.index:
-                start, stop = np.int(t-size//2), np.int(t+size//2)
-                detected_rotations.loc[start: stop] = 1
+            for t_stamp in good.index:
+                start = sub_data[sub_data['size'] == size].loc[t_stamp, 'start']
+                stop =  sub_data[sub_data['size'] == size].loc[t_stamp, 'stop']
+                detected_rotations.loc[np.int(start): np.int(stop)] = 1
     return detected_rotations
 
 
 def evaluate_ellipticity(segment, **kwargs):
     '''
-    Fits an ellipse over a windows of size `size`
+    Fits an ellipse over a windows of size `size` in minutes
     '''
     ellipses = Ellipses(segment=segment, **kwargs).data
     return ellipses
