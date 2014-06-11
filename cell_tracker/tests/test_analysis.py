@@ -35,12 +35,12 @@ def get_mock_segment(radius=30, dtheta=4*np.pi/3,
 def test_simple_ellipis_fit():
 
     segment =  get_mock_segment()
-    start = segment.index.value[0]
-    stop = segment.index.value[-1]
+    start = segment.index[0]
+    stop = segment.index[-1]
     fit_output, components, rotated = fit_arc_ellipse(segment,
                                                       start, stop,
                                                       ['x', 'y', 'z'],
                                                       return_rotated=True)
     chi2 = np.square(fit_output[2]['fvec']).sum()
-    assert np.testing.assert_almost_equal(chi2, 0, decimal=3)
+    np.testing.assert_almost_equal(chi2, 0, decimal=3)
 
