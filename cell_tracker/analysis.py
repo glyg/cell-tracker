@@ -55,12 +55,12 @@ class Ellipses():
 
     def do_fits(self, cutoffs):
 
-        param_names = ['a', 'b', 'phi_x',
+        param_names = ['a', 'b',# 'phi_x',
                        'phi_y','x0', 'y0']
         plane_components = ['r0_x', 'r0_y', 'r0_z',
                             'r1_x', 'r1_y', 'r1_z']
         columns = ['start', 'stop', 'ellipticity', 'chi2', 'dtheta',
-                   'theta_i', 'theta_f']
+                   'theta_i', 'theta_f', 'z']
         columns.extend(plane_components)
         columns.extend(param_names)
 
@@ -95,8 +95,11 @@ class Ellipses():
                     '''Fitting failed between {} and {} '''.format(start, stop))
                 log.debug(fit_output[-2])
                 continue
+            self.data.loc[midle, 'z'] = rotated.z.loc[start:stop].mean()
+
             params = fit_output[0]
-            a, b, phi_x, phi_y, x0, y0 = params
+            #a, b, phi_x, phi_y, x0, y0 = params
+            a, b, phi_y, x0, y0 = params
             a, b = np.abs([a, b])
             a, b = np.max((a, b)), np.min((a, b))
             self.data.loc[midle, 'ellipticity'] = a / b
@@ -114,8 +117,8 @@ class Ellipses():
             thetas = np.arctan2(rotated.y.values - x0,
                                 rotated.x.values - x0)
             dthetas, thetas = continuous_theta(thetas)
-            self.data.loc[midle, 'theta_i'] = thetas[0]
-            self.data.loc[midle, 'theta_f'] = thetas[-1]
+            self.data.loc[midle, 'theta_i'] = thetas.min()
+            self.data.loc[midle, 'theta_f'] = thetas.max()
             self.data.loc[midle, 'dtheta'] = thetas.ptp()
 
         self.data['gof'] = - np.log(self.data['chi2'].astype(np.float))
@@ -128,7 +131,7 @@ class Ellipses():
         # for col in columns:
         #     self.data[col] = self.data[col].astype(np.float)
 
-    def evaluate(self, idx, sampling=10):
+    def evaluate(self, idx, sampling=4):
 
 
         sub_data = self.data.loc[idx]
@@ -140,17 +143,16 @@ class Ellipses():
                              sub_data.theta_f,
                              self.size*sampling)
         rhos = ellipse_radius(thetas, sub_data.a, sub_data.b,
-                              sub_data.phi_x, sub_data.phi_y)
+                              sub_data.phi_y)
+                              #sub_data.phi_x, sub_data.phi_y)
 
         xs = rhos * np.cos(thetas) + sub_data.x0
         ys = rhos * np.sin(thetas) + sub_data.y0
-        zs = np.zeros_like(rhos)
+        zs = np.ones_like(rhos) * sub_data.z
         segdata = self.segment.loc[start:stop][self.coords]
         pca = PCA()
         pca.fit(segdata)
         ellipsis_fit = pca.inverse_transform(np.vstack((xs, ys, zs)).T)
-        avg_zed = self.segment.loc[start:stop][self.coords[-1]].mean()
-        ellipsis_fit[:, 2] += avg_zed - ellipsis_fit[:, 2].mean()
         return ellipsis_fit
 
     def max_ellipticity(self, max_val):
@@ -217,7 +219,8 @@ def fit_arc_ellipse(segment, start, stop,
     b0 = to_fit['y'].ptp()
     phi_x0 , phi_y0 = 0., 0.
     x00, y00 = 0, 0
-    params0 = a0, b0, phi_x0, phi_y0, x00, y00
+    #params0 = a0, b0, phi_x0, phi_y0, x00, y00
+    params0 = a0, b0, phi_y0, x00, y00
     fit_output = leastsq(residuals, params0, [to_fit.x, to_fit.y],
                          full_output=1)
     if return_rotated:
@@ -226,7 +229,8 @@ def fit_arc_ellipse(segment, start, stop,
         return fit_output, components
 
 
-def ellipse_radius(thetas, a, b, phi_x, phi_y):
+#def ellipse_radius(thetas, a, b, phi_x, phi_y):
+def ellipse_radius(thetas, a, b, phi_y):
     ''' Computes the radius of an ellipse with
     the given paramters for the angles given by `thetas`
 
@@ -240,7 +244,7 @@ def ellipse_radius(thetas, a, b, phi_x, phi_y):
     phi_x, phi_y: floats
         Ellipsis phases along x and y, respectively
     '''
-    rhos = a * b / np.sqrt((b * np.cos(thetas + phi_x))**2
+    rhos = a * b / np.sqrt((b * np.cos(thetas))**2
                            + (a * np.sin(thetas + phi_y))**2)
 
     return rhos
@@ -249,10 +253,12 @@ def residuals(params, data):
     '''
 
     '''
-    a, b, phi_x, phi_y, x0, y0 = params
+    #a, b, phi_x, phi_y, x0, y0 = params
+    a, b, phi_y, x0, y0 = params
     x, y = data
     thetas = np.arctan2(y-y0, x-x0)
     rhos = np.hypot(x-x0, y-y0)
-    fit_rhos = ellipse_radius(thetas, a, b, phi_x, phi_y)
+    #fit_rhos = ellipse_radius(thetas, a, b, phi_x, phi_y)
+    fit_rhos = ellipse_radius(thetas, a, b, phi_y)
     return rhos - fit_rhos
 

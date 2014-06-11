@@ -12,6 +12,9 @@ import pandas as pd
 import matplotlib.pylab as plt
 import warnings
 
+import logging
+log = logging.getLogger(__name__)
+
 
 #from .tracking import Ellipses
 
@@ -399,7 +402,8 @@ def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
     return axes, ax_3d
 
 
-def show_ellipses(cluster, label, size,
+def show_ellipses(cluster,
+                  label, size,
                   cutoffs,
                   coords=['x_r', 'y_r', 'z_r'],
                   axes=None, ax_3d=None,
@@ -414,12 +418,18 @@ def show_ellipses(cluster, label, size,
             ax.set_aspect('equal')
         axes[1, 1].axis('off')
         ax_3d = fig.add_subplot(224, projection='3d')
+
+    segments = cluster.trajs.get_segments()
+    all_data = cluster.ellipses[size]
+    data = all_data.xs(label, level='label')
     ellipses = Ellipses(size=size,
-                        segment=cluster.trajs.get_segments()[label],
-                        data=cluster.ellipses[size].xs(label, level='label'),
+                        segment=segments[label],
+                        data=data,
                         coords=list(coords))
 
     for idx in ellipses.good_indices(cutoffs):
+        log.debug(
+            'Good ellipse: size {}, label {}, time stamp {}'.format(size, label, idx))
         curve = ellipses.evaluate(idx)
         if curve is None:
             continue
