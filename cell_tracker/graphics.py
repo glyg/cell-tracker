@@ -418,7 +418,6 @@ def show_ellipses(cluster,
             ax.set_aspect('equal')
         axes[1, 1].axis('off')
         ax_3d = fig.add_subplot(224, projection='3d')
-
     segments = cluster.trajs.get_segments()
     all_data = cluster.ellipses[size]
     data = all_data.xs(label, level='label')

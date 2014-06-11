@@ -114,12 +114,12 @@ class Ellipses():
                 self.data.loc[midle, n] = r
             for n, r in zip(plane_components[3:], r1):
                 self.data.loc[midle, n] = r
-            thetas = np.arctan2(rotated.y.values - x0,
+            thetas = np.arctan2(rotated.y.values - y0,
                                 rotated.x.values - x0)
             dthetas, thetas = continuous_theta(thetas)
             self.data.loc[midle, 'theta_i'] = thetas.min()
             self.data.loc[midle, 'theta_f'] = thetas.max()
-            self.data.loc[midle, 'dtheta'] = thetas.ptp()
+            self.data.loc[midle, 'dtheta'] = thetas[-1] - thetas[0]
 
         self.data['gof'] = - np.log(self.data['chi2'].astype(np.float))
         self.data['radius'] = self.data[['a', 'b']].abs().sum(axis=1) / 2.
