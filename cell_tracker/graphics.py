@@ -391,7 +391,7 @@ def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
                                     cutoffs=cutoffs,
                                     coords=coords,
                                     axes=axes, ax_3d=ax_3d,
-                                    alpha=0.5, lw=1., c='r')
+                                    **ellipsis_kw)
 
     for ax in axes.flatten():
         ax.plot([0], [0], 'k+', ms=20)
