@@ -343,7 +343,20 @@ def _show_projected(z_stack, positions,
 
 
 def plot_rotation_events(cluster, ax=None,
-                         show_segments=False, **kwargs):
+                         show_segments=False,
+                         **plot_kwargs):
+    '''Displays the rotation event score
+
+    Paramters
+    ---------
+    cluster : a Cellluster object
+    ax : matplotlib Axes
+    show_segments : bool
+        if True, also show the rotation index for the individual segments
+    plot_kwargs : dict
+       keyword arguments passed to the plotting function
+    '''
+
     if ax is None:
         fig, ax = plt.subplots()
 
@@ -362,10 +375,13 @@ def plot_rotation_events(cluster, ax=None,
         np.ones_like(cluster.detected_rotations),
         index=cluster.detected_rotations.index).sum(level='t_stamp').astype(np.float)
     total_rot = cluster.detected_rotations.sum(level='t_stamp') / n_detected
-
     ts = total_rot.index.get_level_values('t_stamp').values.copy()
     ts *= cluster.metadata['TimeIncrement']
-    ax.step(ts, total_rot.values, '-', c='k', lw=2)
+    if plot_kwargs.get('c') is None:
+        plot_kwargs['c'] = 'k'
+    if plot_kwargs.get('lw') is None:
+        plot_kwargs['lw'] = 2
+    ax.step(ts, total_rot.values, '-', **plot_kwargs)
 
     ax.set_xlabel('Elapsed time (min)')
     ax.set_ylabel('Rotation events')

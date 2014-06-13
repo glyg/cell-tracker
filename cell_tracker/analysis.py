@@ -25,16 +25,8 @@ ellipsis_cutoffs = defaults['ellipsis_cutoffs']
 
 def scale(trajs, pix_sizex, pix_sizey,
           pix_sizez, inplace=False):
-
-    out_trajs = trajs if inplace else trajs.copy()
-    if pix_sizey == None:
-        out_trajs[['x', 'y']] = trajs[['x', 'y']] * pix_sizex
-    else:
-        out_trajs['x'] = trajs['x'] * pix_sizex
-        out_trajs['y'] = trajs['y'] * pix_sizey
-    out_trajs['z'] = trajs['z'] * pix_sizez
-    return out_trajs
-
+    log.warning('''Deprecated, use `trajs.scale` instead''')
+    return trajs.scale([pix_sizex, pix_sizey, pix_sizez], inplace=inplace)
 
 class Ellipses():
 
@@ -90,6 +82,10 @@ class Ellipses():
             fit_output, components, rotated = fit_arc_ellipse(self.segment,
                                                               start, stop, self.coords,
                                                               return_rotated=True)
+            if fit_output is None:
+                log.debug(
+                    '''Not enough points {} and {} '''.format(start, stop))
+
             if fit_output[-1] not in (1, 2, 3, 4):
                 log.debug(
                     '''Fitting failed between {} and {} '''.format(start, stop))
@@ -205,12 +201,14 @@ def fit_arc_ellipse(segment, start, stop,
 
     pca = PCA()
     sub_segment = segment[coords].loc[start:stop]
-    if sub_segment.shape[0] < 4:
+    if sub_segment.shape[0] < 6:
         warnings.warn('''Not enough points to fit an ellipse''')
-        raise ValueError('''Not enough points to fit an ellipse''')
-        #return None, None
-    rotated = pca.fit_transform(sub_segment[coords])
+        if return_rotated:
+            return None, None, None
+        else:
+            return None, None
 
+    rotated = pca.fit_transform(sub_segment[coords])
     components = pca.components_
     to_fit = pd.DataFrame(data=rotated, index=sub_segment.index,
                           columns=('x', 'y', 'z'))

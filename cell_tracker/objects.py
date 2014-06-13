@@ -57,6 +57,9 @@ class CellCluster:
             pass
         self._complete_metadata()
         self._get_ellipses()
+        ### Scaling lock
+        self.was_scaled = None
+
 
     def _complete_metadata(self):
         shape = self.metadata['Shape']
@@ -104,6 +107,53 @@ class CellCluster:
 
     def save_trajs(self):
         self.oio['trajs'] = self.trajs
+
+    def scale_pix_to_physical(self, coords=['x', 'y', 'z'], factors=None, force=False):
+        ''' Scales the input data according to the metadata
+
+        Parameters
+        ----------
+
+        coords : list of column indexes, optional, default ['x', 'y', 'z']
+             the coordinates to scale
+        factors : list of scaling factors
+             if factors is None, defaults to self.metadata['PhysicalSize{X, Y, Z}']
+        '''
+
+        if factors is None:
+            factors = [self.metadata['PhysicalSizeX'],
+                       self.metadata['PhysicalSizeY'],
+                       self.metadata['PhysicalSizeZ']][:len(coords)]
+
+        if self.was_scaled and not force:
+            raise ValueError('''It appears trajectories where allready scaled, use `force=True` '''
+                             '''if you really want to do this''')
+
+        self.trajs = self.trajs.scale(factors,
+                                      coords=coords,
+                                      inplace=True)
+        self.was_scaled = True
+
+    def scale_physical_to_pix(self, coords=['x', 'y', 'z'], shifts=None):
+        '''Returns a copy of `self.trajs` scaled back to image space coordinates.
+
+        Parameters
+        ----------
+        coords: column indexes
+
+        '''
+        trajs_pixels = self.trajs.scale([1/self.metadata['PhysicalSizeX'],
+                                         1/self.metadata['PhysicalSizeY'],
+                                         1/self.metadata['PhysicalSizeZ']],
+                                        coords=coords,
+                                        inplace=False)
+        if shifts is not None:
+            if len(shifts) != len(coords):
+                raise ValueError('''Arguments shifts and coords should have the same length''')
+            for shift, coord in zip(shifts, coords):
+                trajs_pixels[coord] = trajs_pixels[coord] + shift
+        return trajs_pixels
+
 
     def get_center(self, coords=['x', 'y', 'z'], smooth=0,
                    append=True, relative=True):
@@ -225,7 +275,7 @@ class CellCluster:
         self.ellipses[size] = _ellipses.sortlevel(level='t_stamp')
         self.oio['ellipses_%i' %size] = self.ellipses[size]
 
-    def detect_rotations(self, cutoffs):
+    def detect_rotations(self, cutoffs, method='binary'):
 
         for size in self.ellipses.keys():
             ellipsis_df = self.ellipses[size]
@@ -243,12 +293,12 @@ class CellCluster:
         data.sort_index(axis=0, inplace=True)
         data.sort_index(axis=1, inplace=True)
         detected_rotations = self.trajs.groupby(
-            level='label').apply(get_segment_rotations, data)
-        detected_rotations = detected_rotations.stack()
+            level='label').apply(_get_segment_rotations, data, method)
+        if detected_rotations.ndim == 2:
+            detected_rotations = detected_rotations.stack()
         detected_rotations = detected_rotations.swaplevel('label', 't_stamp')
         detected_rotations = detected_rotations.sortlevel(level='label')
         self.detected_rotations = detected_rotations.sortlevel(level='t_stamp')
-
 
 def build_iterator(stackio, preprocess=None):
 
@@ -276,8 +326,13 @@ def build_iterator(stackio, preprocess=None):
                 yield preprocess(stack)
     return iterator
 
-def get_segment_rotations(segment, data):
-
+def _get_segment_rotations(segment, data, method):
+    '''
+    Paramters
+    ---------
+    method : {'binary' | 'score'}
+       the method used to compute the score
+    '''
     label = segment.index.get_level_values('label').unique()[0]
     t0 = segment.index.get_level_values('t_stamp')[0]
     t1 = segment.index.get_level_values('t_stamp')[-1]
@@ -292,7 +347,7 @@ def get_segment_rotations(segment, data):
         return detected_rotations
 
     sizes = data['size'].unique()
-
+    n_sizes = len(sizes)
     for size in sizes:
         at_size = sub_data[sub_data['size'] == size]
         good = at_size[at_size['good'] == 1]
@@ -302,7 +357,12 @@ def get_segment_rotations(segment, data):
             for t_stamp in good.index:
                 start = sub_data[sub_data['size'] == size].loc[t_stamp, 'start']
                 stop =  sub_data[sub_data['size'] == size].loc[t_stamp, 'stop']
-                detected_rotations.loc[np.int(start): np.int(stop)] = 1
+                if method == 'score':
+                    detected_rotations.loc[t_stamp] += 1. / n_sizes
+                elif method == 'binary':
+                    detected_rotations.loc[np.int(start): np.int(stop)] = 1
+                else:
+                    raise ValueError('''method should be either "binary" or "score"''')
     return detected_rotations
 
 
