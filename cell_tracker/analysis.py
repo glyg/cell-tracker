@@ -79,9 +79,6 @@ class Ellipses():
 
         times  = self.segment.t
         indices = times[times < times.iloc[-1] - self.size].index
-
-        #last = np.where(t_stamps > (t_stamps[-1] - self.size))[0][0]
-
         for idx in indices:
             start = idx[0]
             midle = times[times <= times.loc[idx] + self.size/2].index[-1][0]

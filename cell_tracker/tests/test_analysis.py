@@ -35,10 +35,13 @@ def test_simple_ellipis_fit():
     segment =  get_mock_segment()
     start = segment.index[0]
     stop = segment.index[-1]
-    fit_output, components, rotated = fit_arc_ellipse(segment,
-                                                      start, stop,
-                                                      ['x', 'y', 'z'],
-                                                      return_rotated=True)
-    chi2 = np.square(fit_output[2]['fvec']).sum()
+    fit_data, components, rotated = fit_arc_ellipse(segment,
+                                                    start, stop,
+                                                    ['x', 'y', 'z'],
+                                                    method='polar',
+                                                    return_rotated=True)
+
+    assert fit_data is not None
+    chi2 = np.exp(-fit_data['gof'])
     np.testing.assert_almost_equal(chi2, 0, decimal=3)
 
