@@ -6,16 +6,16 @@ from cell_tracker.analysis import fit_arc_ellipse
 def get_mock_segment(radius=30, dtheta=4*np.pi/3,
                      ellipticity=1.5,
                      noise=1e-4, n_points=10,
-                     t_span=90, t_step=3, rotation=None):
+                     t_step=3, rotation=None):
 
-    a = radius * ellipticity
-    b = radius / ellipticity
-
+    a = 2 * radius /(1 + ellipticity)
+    b = 2 * radius /(1 + 1/ellipticity)
+    t_stamps = np.arange(n_points)
+    ts = t_stamps * t_step
+    omega = dtheta / ts.max()
     phi_y, x0, y0 = 0, 0, 0
-
-    thetas = np.linspace(0, dtheta, n_points)
-    xs = a * np.cos(thetas)
-    ys = b * np.sin(thetas)
+    xs = a * np.cos(omega * ts)
+    ys = b * np.sin(omega * ts)
     zs = np.zeros(xs.size)
     x_err = np.random.normal(scale=noise*radius, size=xs.size)
     y_err = np.random.normal(scale=noise*radius, size=xs.size)
@@ -24,8 +24,6 @@ def get_mock_segment(radius=30, dtheta=4*np.pi/3,
     xs += x_err
     ys += y_err
     zs += z_err
-    t_stamps = np.arange(n_points)
-    ts = t_stamps * t_step
     segment = pd.DataFrame(index=pd.Index(t_stamps, name='t_stamp'),
                            data=np.vstack([xs, ys, zs, x_err, y_err, ts]).T,
                            columns=['x', 'y', 'z', 'x_err', 'y_err', 't'])

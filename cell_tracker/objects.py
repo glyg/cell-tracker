@@ -366,12 +366,18 @@ def _get_segment_rotations(segment, data, method):
     return detected_rotations
 
 
-def evaluate_ellipticity(segment, **kwargs):
+def evaluate_ellipticity(segment, size=0,
+                         cutoffs=ellipsis_cutoffs,
+                         data=None,
+                         coords=['x_r', 'y_r', 'z_r']):
     '''
     Fits an ellipse over a windows of size `size` in minutes
     '''
-    ellipses = Ellipses(segment=segment, **kwargs).data
-    return ellipses
+    ellipses = Ellipses(segment=segment, size=size,
+                         cutoffs=ellipsis_cutoffs,
+                         data=None,
+                         coords=['x_r', 'y_r', 'z_r'])
+    return ellipses.data
 
 def continuous_theta_(segment):
     '''
