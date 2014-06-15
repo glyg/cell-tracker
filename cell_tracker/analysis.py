@@ -33,7 +33,7 @@ fit_data_names = ['a', 'b', 'phi_y',
 plane_components = ['r0_x', 'r0_y', 'r0_z',
                     'r1_x', 'r1_y', 'r1_z']
 
-columns = fit_data_names.copy()
+columns = list(fit_data_names) # Make a copy (`copy` list attribute is python3 only)
 columns.extend(plane_components)
 
 
