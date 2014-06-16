@@ -1,1 +1,1 @@
-{"min_gof": 0, "max_radius": 30, "max_dtheta": 720.0, "min_dtheta": 90.0, "max_ellipticity": 3, "min_radius": 3}
+{"min_dtheta": 60.0, "max_ellipticity": 3, "max_radius": 60, "min_radius": 8, "min_gof": 0, "max_dtheta": 720.0}

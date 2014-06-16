@@ -218,7 +218,7 @@ def fit_arc_ellipse(segment, start, stop,
     # initial guesses
     a0 = to_fit['x'].ptp()
     b0 = to_fit['y'].ptp()
-    phi_x0 , phi_y0 = 0., 0.
+    phi_y_x0 , phi_y0 = 0., 0.
     x00, y00 = 0, 0
     params0 = [a0, b0, phi_y0, x00, y00]
     if method == 'polar':
@@ -229,7 +229,7 @@ def fit_arc_ellipse(segment, start, stop,
         dthetas, thetas = continuous_theta(thetas)
         omega0 = (thetas[-1] - thetas[0]) / to_fit.t.ptp()
         params0.append(omega0)
-        params0.append(0) ### phi_x
+        #params0.append(0) ### phi_y_x
         fit_output = leastsq(residuals_cartesian, params0,
                              [to_fit.x, to_fit.y, to_fit.t],
                              full_output=1)
@@ -248,7 +248,8 @@ def fit_arc_ellipse(segment, start, stop,
     if method == 'polar':
         a, b, phi_y, x0, y0 = params
     elif method == 'cartesian':
-        a, b, phi_y, x0, y0, omega, phi_x = params
+        #a, b, phi_y, x0, y0, omega, phi_y_x = params
+        a, b, phi_y, x0, y0, omega = params
 
     ### Fit parameters
     fit_data['a'] = a
@@ -297,17 +298,19 @@ def fit_arc_ellipse(segment, start, stop,
 
 def residuals_cartesian(params, data):
 
-    a, b, phi_y, x0, y0, omega, phi_x = params
+    #a, b, phi_y, x0, y0, omega, phi_y_x = params
+    a, b, phi_y, x0, y0, omega = params
     x, y, t = data
-    fit_x, fit_y = ellipsis_cartes(t, a, b, omega, phi_x, phi_y, x0, y0)
+    fit_x, fit_y = ellipsis_cartes(t, a, b, omega, phi_y, x0, y0)
     res_x = x - fit_x
     res_y = y - fit_y
     return np.hstack((res_y, res_x))
 
-def ellipsis_cartes(t, a, b, omega, phi_x, phi_y, x0, y0):
+def ellipsis_cartes(t, a, b, omega, phi_y, x0, y0):
 
-    x = a * np.cos(omega * t + phi_x) + x0
-    y = b * np.sin(omega * t + phi_y) + y0
+    thetas = omega * t + phi_y
+    x = a * np.cos(thetas) + x0
+    y = b * np.sin(thetas) + y0
     return x, y
 
 
@@ -335,10 +338,10 @@ def ellipsis_radius(thetas, a, b, phi_y):
         ellipses radius is to be computed
     a, b: floats
         The major and minor radii of the ellipsis
-    phi_x, phi_y: floats
-        Ellipsis phases along x and y, respectively
+    phi_y: float
+        Ellipsis phase respectively
     '''
-    rhos = a * b / np.sqrt((b * np.cos(thetas))**2
+    rhos = a * b / np.sqrt((b * np.cos(thetas + phi_y))**2
                            + (a * np.sin(thetas + phi_y))**2)
 
     return rhos
