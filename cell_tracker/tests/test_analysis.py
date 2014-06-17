@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
 from cell_tracker.analysis import fit_arc_ellipse
+from cell_tracker import data
 
-
-def get_mock_segment(radius=30, dtheta=4*np.pi/3,
-                     ellipticity=1.5,
-                     noise=1e-4, n_points=10,
-                     t_step=3, rotation=None):
+def get_mock_ellipsis_segment(radius=30, dtheta=4*np.pi/3,
+                              ellipticity=1.5,
+                              noise=1e-4, n_points=10,
+                              t_step=3, rotation=None):
 
     a = 2 * radius /(1 + ellipticity)
     b = 2 * radius /(1 + 1/ellipticity)
@@ -32,7 +32,7 @@ def get_mock_segment(radius=30, dtheta=4*np.pi/3,
 
 def test_simple_ellipis_fit():
 
-    segment =  get_mock_segment()
+    segment =  get_mock_ellipsis_segment()
     start = segment.index[0]
     stop = segment.index[-1]
     fit_data, components, rotated = fit_arc_ellipse(segment,
@@ -44,4 +44,8 @@ def test_simple_ellipis_fit():
     assert fit_data is not None
     chi2 = np.exp(-fit_data['gof'])
     np.testing.assert_almost_equal(chi2, 0, decimal=3)
+
+
+def test_load_from_excel():
+    xlsx_file = data.wt_xlsx()
 

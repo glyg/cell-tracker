@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
@@ -23,9 +22,6 @@ from sktracker.io.utils import load_img_list
 
 data_path = os.path.dirname(os.path.realpath(__file__))
 
-
-__all__ = ['stack_list_dir',
-           'stack_list']
 
 # Image files
 def stack_list_dir():
@@ -57,7 +53,18 @@ def nuclei_h5_temp():
 
 ## Excel
 def sample_xlsx():
-    xlx_file = os.path.join(data_path,
+    xlsx_file = os.path.join(data_path,
                             'excel_trajs_example.xlsx')
+    return xlsx_file
 
+def wt_xlsx():
+    xlsx_file = os.path.join(data_path,
+                            'wild_type.xlsx')
+    return xlsx_file
+
+
+def armgfp_xlsx():
+    xlsx_file = os.path.join(data_path,
+                            'ArmGFP.xlsx')
+    return xlsx_file
 
