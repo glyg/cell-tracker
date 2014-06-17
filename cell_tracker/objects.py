@@ -53,6 +53,9 @@ class CellCluster:
         try:
             self.trajs = Trajectories(self.oio['trajs'])
             log.info('Found trajectories in {}'.format(self.oio.store_path))
+            self.averages = pd.DataFrame(index=self.trajs.t_stamps)
+            self.averages['t'] = self.trajs['t'].mean(level='t_stamp')
+
         except KeyError:
             pass
         self._complete_metadata()
@@ -107,6 +110,9 @@ class CellCluster:
 
     def save_trajs(self):
         self.oio['trajs'] = self.trajs
+        if hasattr(self, 'averages'):
+            self.oio['averages'] = self.averages
+
 
     def scale_pix_to_physical(self, coords=['x', 'y', 'z'], factors=None, force=False):
         ''' Scales the input data according to the metadata
@@ -194,6 +200,11 @@ class CellCluster:
         if relative:
             relative_coords = [c+'_r' for c in coords]
             self.trajs[relative_coords] = self.trajs[coords] - self._reindexed_center()
+        if not hasattr(self, 'averages'):
+            self.averages = pd.DataFrame(index=self.trajs.t_stamps)
+            self.averages['t'] = self.trajs['t'].mean(level='t_stamp')
+        for c in coords:
+            self.averages[c] = self.center[c]
 
     def detect_cells(self, preprocess, **kwargs):
         '''
@@ -258,6 +269,10 @@ class CellCluster:
         self.theta_bin_count, self.theta_bins = np.histogram(
             self.trajs['theta'].dropna().astype(np.float),
             bins=np.linspace(-4*np.pi, 4*np.pi, 4 * 12 + 1))
+        if not hasattr(self, 'averages'):
+            self.averages = pd.DataFrame(index=self.trajs.t_stamps)
+            self.averages['t'] = self.trajs['t'].mean(level='t_stamp')
+        self.averages['theta'] = self.trajs['theta'].mean(level='t_stamp')
 
         #self.oio['trajs'] = self.trajs
 
@@ -299,6 +314,34 @@ class CellCluster:
         detected_rotations = detected_rotations.swaplevel('label', 't_stamp')
         detected_rotations = detected_rotations.sortlevel(level='label')
         self.detected_rotations = detected_rotations.sortlevel(level='t_stamp')
+
+    def forward_displacement(self):
+
+        pca = PCA()
+        rotated = pca.fit_transform(self.trajs[['x', 'y', 'z']])
+        print('''Fraction of the movement's variance along the principal axis : {0:.1f}%'''
+              .format(pca.explained_variance_ratio_[0] * 100))
+        self.trajs['x_pca'] = rotated[:, 0]
+        self.trajs['y_pca'] = rotated[:, 1]
+        self.trajs['z_pca'] = rotated[:, 2]
+        self.save_trajs()
+        self.trajs = Trajectories(
+            self.trajs.groupby(level='label').apply(compute_displacement,
+                                                    coords=['x_pca', 'y_pca', 'z_pca']))
+
+        if not hasattr(self, 'averages'):
+            self.averages = pd.DataFrame(index=self.trajs.t_stamps)
+            self.averages['t'] = self.trajs['t'].mean(level='t_stamp')
+        self.averages['fwd_frac'] = self.trajs['fwd_frac'].mean(level='t_stamp')
+
+    def get_MSD(self):
+        '''
+        Compute the mean square displacement for each segment
+        '''
+        dts = self.trajs.t_stamps - self.trajs.t_stamps[0]
+        self.MSD = self.trajs.groupby(level='label').apply(compute_MSD, dts)
+        self.MSD['Dt'] = self.MSD.index.get_level_values('Dt_stamp')*self.metadata['TimeIncrement']
+
 
 def build_iterator(stackio, preprocess=None):
 
@@ -388,3 +431,41 @@ def continuous_theta_(segment):
     segment['theta'] = thetas
     return segment
 
+def compute_displacement(segment, coords=['x', 'y', 'z']):
+    '''Computes the cumulated displacement of the segment given by
+
+    .. math::
+    \begin{aligned}
+    D(0) &= 0\\
+    D(t) &= \sum_{i=1}^{t} \left((x_i - x_{i-1})^2 + (y_i - y_{i-1})^2 + (z_i - z_{i-1})^2\right)^{1/2}\\
+    \end{aligned}
+
+    '''
+    x, y, z = coords
+    displacement = np.sqrt(segment[x].diff()**2
+                           + segment[y].diff()**2
+                           + segment[z].diff()**2)
+    displacement = displacement.cumsum()
+    segment['disp'] = displacement
+    segment['fwd_frac'] = (segment[x] - segment[x].iloc[0]) / segment['disp']
+
+    return segment
+
+def compute_MSD(segment, dts, coords=['x', 'y', 'z']):
+    '''Computes the mean square displacement of the segment given by
+
+    .. math::
+    \begin{aligned}
+    \mbox{MSD}(\Delta t) &=  \frac{\sum_0^{T - \Delta t}
+        \left(\mathbf{r}(t + \Delta t)  - \mathbf{r}(t) \right)^2}{(T - \Delta t) / \delta t}
+    \end{aligned}
+    '''
+    msds = pd.DataFrame(index=pd.Index(dts, name='Dt_stamp'),
+                        columns=['MSD', 'MSD_std'], dtype=np.float)
+    msds.loc[0] = 0, 0
+    for dt in dts[1:]:
+        msd = ((segment[coords]
+                - segment[coords].shift(dt)).dropna()**2).sum(axis=1)
+        msds.loc[dt, 'MSD'] = msd.mean()
+        msds.loc[dt, 'MSD_std'] = msd.std()
+    return msds
