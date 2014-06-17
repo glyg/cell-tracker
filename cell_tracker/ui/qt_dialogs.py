@@ -14,9 +14,6 @@ log = logging.getLogger(__name__)
 
 import sys, os
 
-import pandas as pd
-import numpy as np
-
 from PyQt4 import QtGui
 from .. import io
 
@@ -29,7 +26,7 @@ def get_cluster(default_path):
     data_path, name = get_dataset(default_path, ext_filter)
     if data_path is None:
         return
-    cellcluster = io.get_cluster(data_path, name)
+    cellcluster = io.get_cluster(data_path)
     return cellcluster
 
 
@@ -40,7 +37,7 @@ def get_dataset(default='.', ext_filter='*.*'):
     app = QtGui.QApplication.instance()
     if not app:
         app = QtGui.QApplication(sys.argv)
-    out = QtGui.QFileDialog.getOpenFileName(directory=default, ext_filter=ext_filter)
+    out = QtGui.QFileDialog.getOpenFileName(directory=default, filter=ext_filter)
     if not len(out):
         print('''No data loaded''')
         return None, None
@@ -61,7 +58,7 @@ def get_excel_file(default='.'):
         app = QtGui.QApplication(sys.argv)
     out = QtGui.QFileDialog.getOpenFileName(directory=default,
                                             caption='Choose an XLSX file',
-                                            ext_filter='*.xlsx')
+                                            filter='*.xlsx')
     if not len(out):
         print('''No data loaded''')
         return None, None

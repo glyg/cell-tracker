@@ -1,12 +1,14 @@
-#from .analysis import Ellipses
+
 from .objects import build_iterator, CellCluster
 
-try:
-    from . import ui
-except ImportError:
-    raise
-    # print('UI tools require IPython and PyQt to function, '
-    #       'resolve those dependencies if you want to use those')
+# try:
+#     from . import ui
+# except ImportError:
+#     print('UI tools require IPython and PyQt to function, '
+#           'resolve those dependencies if you want to use those')
+
+from . import ui
+
 from . import graphics
 
 from .detection import inspect_stack, show_histogram

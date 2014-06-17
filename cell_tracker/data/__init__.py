@@ -62,6 +62,10 @@ def wt_xlsx():
                             'wild_type.xlsx')
     return xlsx_file
 
+def wt_h5():
+    h5_file = os.path.join(data_path,
+                            'wild_type.h5')
+    return h5_file
 
 def armgfp_xlsx():
     xlsx_file = os.path.join(data_path,

@@ -45,7 +45,3 @@ def test_simple_ellipis_fit():
     chi2 = np.exp(-fit_data['gof'])
     np.testing.assert_almost_equal(chi2, 0, decimal=3)
 
-
-def test_load_from_excel():
-    xlsx_file = data.wt_xlsx()
-

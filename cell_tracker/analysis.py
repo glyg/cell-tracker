@@ -20,7 +20,6 @@ import logging
 log = logging.getLogger(__name__)
 
 
-
 ellipsis_cutoffs = defaults['ellipsis_cutoffs']
 
 fit_data_names = ['a', 'b', 'phi_y',

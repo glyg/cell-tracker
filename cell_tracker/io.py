@@ -6,25 +6,24 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 
-import warnings
-warnings.filterwarnings("ignore")
-import logging
-log = logging.getLogger(__name__)
-
 import sys, os
 
 import pandas as pd
 import numpy as np
 
+import logging
+log = logging.getLogger(__name__)
+
+
 from sktracker.io import StackIO, ObjectsIO
 from sktracker.io.utils import load_img_list
 from sktracker.trajectories import Trajectories
-from . import CellCluster
+from .objects import CellCluster
 from .conf import default_metadata, metadata_types
 
 
 
-def get_cluster(data_path, name,  metadata=None, single_file=False):
+def get_cluster(data_path,  metadata=None, single_file=False):
     '''
     This opens a file dialog allowing to select the directory for
     the tracked data, and returns a :class:`CellCluster` object.
