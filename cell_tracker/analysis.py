@@ -33,9 +33,11 @@ fit_data_names = ['a', 'b', 'phi_y',
 plane_components = ['r0_x', 'r0_y', 'r0_z',
                     'r1_x', 'r1_y', 'r1_z']
 
+start_stop = ['start', 'stop']
 columns = list(fit_data_names) # Make a copy (`copy` list attribute is python3 only)
 columns.extend(plane_components)
 
+columns.extend(start_stop)
 
 
 def scale(trajs, pix_sizex, pix_sizey,
