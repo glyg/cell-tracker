@@ -58,7 +58,10 @@ class CellCluster:
 
         except KeyError:
             pass
-        self._complete_metadata()
+        try:
+            self._complete_metadata()
+        except KeyError:
+            pass
         self._get_ellipses()
         ### Scaling lock
         self.was_scaled = None
@@ -469,3 +472,4 @@ def compute_MSD(segment, dts, coords=['x', 'y', 'z']):
         msds.loc[dt, 'MSD'] = msd.mean()
         msds.loc[dt, 'MSD_std'] = msd.std()
     return msds
+

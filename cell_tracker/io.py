@@ -5,7 +5,6 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-
 import sys, os
 
 import pandas as pd
@@ -16,11 +15,11 @@ log = logging.getLogger(__name__)
 
 
 from sktracker.io import StackIO, ObjectsIO
+from sktracker.io.metadataio import METADATA_TYPE
 from sktracker.io.utils import load_img_list
 from sktracker.trajectories import Trajectories
 from .objects import CellCluster
-from .conf import default_metadata, metadata_types
-
+from .conf import default_metadata
 
 
 def get_cluster(data_path,  metadata=None, single_file=False):
@@ -116,17 +115,18 @@ def get_from_excel(data_path):
     metadata = {name: value for name, value
                 in zip(metadata['Name'], metadata['Value'])}
 
-    for key, val in metadata.items():
-        dtype = metadata_types[key]
-        if dtype == tuple:
-            tp = val.replace('(', '')
-            tp = tp.replace(')', '')
-            vs = tp.split(',')
-            metadata[key] = tuple(int(v) for v in vs)
-        elif dtype == str:
-            continue
-        else:
-            metadata[key] = dtype(val)
+    ### This is covered in at OIOMetadata instanciation
+    # for key, val in metadata.items():
+    #     dtype = METADATA_TYPE[key]
+    #     if dtype == tuple:
+    #         tp = val.replace('(', '')
+    #         tp = tp.replace(')', '')
+    #         vs = tp.split(',')
+    #         metadata[key] = tuple(int(v) for v in vs)
+    #     elif dtype == str:
+    #         continue
+    #     else:
+    #         metadata[key] = dtype(val)
 
     metadata['FileName'] = os.path.join(
         os.path.dirname(data_path), metadata['FileName'])
@@ -144,3 +144,44 @@ def get_from_excel(data_path):
     cellcluster.trajs = trajs
     cellcluster.oio['trajs'] = trajs
     return cellcluster
+
+
+def load_multiple_excel_trajs(data_path):
+
+    xlsx_file = pd.io.excel.ExcelFile(data_path)
+
+    lastsheet = xlsx_file.book.nsheets - 1
+    global_metadata = pd.read_excel(data_path, lastsheet)
+
+    global_metadata = {name: value for name, value
+                       in zip(global_metadata['Name'],
+                              global_metadata['Value'])}
+
+    clusters = {}
+
+    for i, name in enumerate(global_metadata['FileName'].split(',')):
+
+        ### Read the data
+        trajs = pd.read_excel(data_path, i)
+        trajs.set_index(['t_stamp', 'label'],
+                        inplace=True)
+        trajs = Trajectories(trajs.dropna())
+
+        metadata = global_metadata.copy()
+        metadata['FileName'] = os.path.join(
+            os.path.dirname(data_path), name)
+
+        store_path = metadata['FileName']
+        if '.' in store_path[-6:]:
+            store_path = ''.join(store_path.split('.')[:-1]+['.h5'])
+        else:
+            store_path = store_path+'.h5'
+        store_path = os.path.join(
+            os.path.dirname(data_path), store_path)
+
+        ### The ObjectsIO class
+        objectsio = ObjectsIO(metadata=metadata, store_path=store_path)
+        cellcluster = ct.CellCluster(objectsio=objectsio)
+        cellcluster.trajs = trajs
+        cellcluster.oio['trajs'] = trajs
+        clusters[name] = cellcluster
