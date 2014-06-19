@@ -463,6 +463,7 @@ def compute_MSD(segment, dts, coords=['x', 'y', 'z']):
         \left(\mathbf{r}(t + \Delta t)  - \mathbf{r}(t) \right)^2}{(T - \Delta t) / \delta t}
     \end{aligned}
     '''
+    dts = np.asarray(dts, dtype=np.int)
     msds = pd.DataFrame(index=pd.Index(dts, name='Dt_stamp'),
                         columns=['MSD', 'MSD_std'], dtype=np.float)
     msds.loc[0] = 0, 0
