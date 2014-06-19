@@ -72,3 +72,7 @@ def armgfp_xlsx():
                             'ArmGFP.xlsx')
     return xlsx_file
 
+def multiple_xlsx():
+    xlsx_file = os.path.join(data_path,
+                            'multiple_movies.xlsx')
+    return xlsx_file

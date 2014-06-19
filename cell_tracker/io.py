@@ -146,7 +146,7 @@ def get_from_excel(data_path):
     return cellcluster
 
 
-def load_multiple_excel_trajs(data_path):
+def load_multiple_excel(data_path):
 
     xlsx_file = pd.io.excel.ExcelFile(data_path)
 
@@ -181,7 +181,9 @@ def load_multiple_excel_trajs(data_path):
 
         ### The ObjectsIO class
         objectsio = ObjectsIO(metadata=metadata, store_path=store_path)
-        cellcluster = ct.CellCluster(objectsio=objectsio)
+        cellcluster = CellCluster(objectsio=objectsio)
         cellcluster.trajs = trajs
         cellcluster.oio['trajs'] = trajs
         clusters[name] = cellcluster
+
+    return clusters

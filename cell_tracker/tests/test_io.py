@@ -14,3 +14,7 @@ def test_from_h5():
     cluster = io.get_cluster(h5_path)
     assert cluster.trajs.shape == (175, 19)
 
+def test_multi_excel():
+    xlsx_path = data.multiple_xlsx()
+    clusters = io.load_multiple_excel(xlsx_path)
+    assert len(clusters.keys() == 3)
