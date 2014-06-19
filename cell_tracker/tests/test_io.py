@@ -17,4 +17,4 @@ def test_from_h5():
 def test_multi_excel():
     xlsx_path = data.multiple_xlsx()
     clusters = io.load_multiple_excel(xlsx_path)
-    assert len(clusters.keys() == 3)
+    assert len(clusters.keys()) == 3
