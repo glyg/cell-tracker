@@ -106,6 +106,9 @@ def get_from_excel(data_path):
     trajs = pd.read_excel(data_path, 0)
     trajs.set_index(['t_stamp', 'label'],
                     inplace=True)
+    trajs.t_stamp = trajs.t_stamp.astype(np.int)
+    trajs.label = trajs.label.astype(np.int)
+
     ### The Trajectories class is a subclass of
     ### pandas DataFrame
     ### Parsing excel files tends to add NaNs to the data
@@ -114,19 +117,6 @@ def get_from_excel(data_path):
     metadata = pd.read_excel(data_path, 1)
     metadata = {name: value for name, value
                 in zip(metadata['Name'], metadata['Value'])}
-
-    ### This is covered in at OIOMetadata instanciation
-    # for key, val in metadata.items():
-    #     dtype = METADATA_TYPE[key]
-    #     if dtype == tuple:
-    #         tp = val.replace('(', '')
-    #         tp = tp.replace(')', '')
-    #         vs = tp.split(',')
-    #         metadata[key] = tuple(int(v) for v in vs)
-    #     elif dtype == str:
-    #         continue
-    #     else:
-    #         metadata[key] = dtype(val)
 
     metadata['FileName'] = os.path.join(
         os.path.dirname(data_path), metadata['FileName'])
@@ -163,6 +153,8 @@ def load_multiple_excel(data_path):
 
         ### Read the data
         trajs = pd.read_excel(data_path, i)
+        trajs.t_stamp = trajs.t_stamp.astype(np.int)
+        trajs.label = trajs.label.astype(np.int)
         trajs.set_index(['t_stamp', 'label'],
                         inplace=True)
         trajs = Trajectories(trajs.dropna())

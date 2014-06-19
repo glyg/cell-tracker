@@ -434,6 +434,9 @@ def continuous_theta_(segment):
     segment['theta'] = thetas
     return segment
 
+#def forward_vec()
+
+
 def compute_displacement(segment, coords=['x', 'y', 'z']):
     '''Computes the cumulated displacement of the segment given by
 

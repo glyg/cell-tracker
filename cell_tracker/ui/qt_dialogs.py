@@ -29,6 +29,39 @@ def get_cluster(default_path):
     cellcluster = io.get_cluster(data_path)
     return cellcluster
 
+def get_multiple_clusters(default_path):
+
+    valid_exts = ['.h5', '.xlsx']
+    ext_filter  = ' '.join(['*{}'.format(ext) for ext in valid_exts])
+
+    data_paths = get_datasets(default_path, ext_filter)
+    if data_paths is None or not len(data_paths):
+        return
+    if len(data_paths) == 1 and data_paths[0].endswith('.xlsx'):
+        cellclusters = io.load_multiple_excel(data_paths[0])
+    else:
+        cellclusters = {}
+        for data_path in data_paths:
+           cluster = io.get_cluster(data_path)
+           cellclusters[os.path.basename(cluster.oio.store_path)] = cluster
+    return cellclusters
+
+def get_datasets(default='.', ext_filter='*.*'):
+    '''
+    Opens a directory select dialog
+    '''
+    app = QtGui.QApplication.instance()
+    if not app:
+        app = QtGui.QApplication(sys.argv)
+    out = QtGui.QFileDialog.getOpenFileNames(directory=default, filter=ext_filter)
+    if not len(out):
+        print('''No data loaded''')
+        return None
+    data_paths = [str(data_path) for data_path in out]
+
+    print('Choosen data paths: :\n ')
+    print('\n'.join(data_paths))
+    return data_paths
 
 def get_dataset(default='.', ext_filter='*.*'):
     '''
@@ -48,6 +81,9 @@ def get_dataset(default='.', ext_filter='*.*'):
 
     print('Choosen data path: %s' % data_path)
     return data_path, name
+
+
+
 
 def get_excel_file(default='.'):
     '''
