@@ -104,10 +104,10 @@ def get_from_excel(data_path):
 
     ### Read the data
     trajs = pd.read_excel(data_path, 0)
-    trajs.set_index(['t_stamp', 'label'],
-                    inplace=True)
     trajs.t_stamp = trajs.t_stamp.astype(np.int)
     trajs.label = trajs.label.astype(np.int)
+    trajs.set_index(['t_stamp', 'label'],
+                    inplace=True)
 
     ### The Trajectories class is a subclass of
     ### pandas DataFrame
