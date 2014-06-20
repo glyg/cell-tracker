@@ -392,11 +392,13 @@ def plot_rotation_events(cluster, ax=None,
 
 
 def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
+                         method='polar',
                          scatter_kw={}, line_kw={},
                          ellipsis_kw={},
                          savefile=None, axes=None, ax_3d=None):
 
     coords=['x_r', 'y_r', 'z_r']
+
     axes, ax_3d = draw.show_4panels(cluster.trajs, label,
                                     axes=axes, ax_3d=ax_3d,
                                     scatter_kw=scatter_kw,
@@ -407,6 +409,7 @@ def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
                                     cutoffs=cutoffs,
                                     coords=coords,
                                     axes=axes, ax_3d=ax_3d,
+                                    method=method,
                                     **ellipsis_kw)
 
     for ax in axes.flatten():
@@ -423,6 +426,7 @@ def show_ellipses(cluster,
                   cutoffs,
                   coords=['x_r', 'y_r', 'z_r'],
                   axes=None, ax_3d=None,
+                  method='polar',
                   **plot_kwargs):
 
     if axes is None:
@@ -440,6 +444,7 @@ def show_ellipses(cluster,
     ellipses = Ellipses(size=size,
                         segment=segments[label],
                         data=data,
+                        method=method,
                         coords=list(coords))
 
     for idx in ellipses.good_indices(cutoffs):

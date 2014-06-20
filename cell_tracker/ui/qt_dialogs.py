@@ -17,7 +17,7 @@ import sys, os
 from PyQt4 import QtGui
 from .. import io
 
-def get_cluster(default_path):
+def get_cluster(default_path='.'):
 
     tiff_exts = ['.tiff', '.tif', '.TIFF', '.TIF']
     valid_exts = tiff_exts + ['.h5', '.xlsx']

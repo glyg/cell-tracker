@@ -48,12 +48,16 @@ class Ellipses():
 
     def __init__(self, size=0,
                  cutoffs=ellipsis_cutoffs,
+                 method='polar',
                  segment=None,
                  data=None,
+                 t_step=1.,
                  coords=['x_r', 'y_r', 'z_r']):
         self.coords = coords
         self.segment = segment
         self.size = size
+        self.t_step = t_step
+        self.method = method
         if data is not None:
             self.data = data
         elif segment is not None:
@@ -62,7 +66,6 @@ class Ellipses():
             self.data = pd.DataFrame()
 
     def do_fits(self, cutoffs):
-
 
         self.data = pd.DataFrame(index=self.segment.index,
                                  columns=columns, dtype=np.float)
@@ -88,7 +91,7 @@ class Ellipses():
             self.data.loc[midle, 'stop'] = stop
             fit_data, components, rotated = fit_arc_ellipse(self.segment,
                                                               start, stop, self.coords,
-                                                              method='polar', ## 'polar' or 'cartesian'
+                                                              method=self.method, ## 'polar' or 'cartesian'
                                                               return_rotated=True)
             if fit_data is None:
                 log.debug(
@@ -118,15 +121,26 @@ class Ellipses():
             return
 
         start, stop = sub_data[['start', 'stop']].astype(np.int)
-        thetas = np.linspace(sub_data.theta_i,
-                             sub_data.theta_f,
-                             self.size*sampling)
-        rhos = ellipsis_radius(thetas, sub_data.a, sub_data.b,
-                               sub_data.phi_y)
+        if self.method == 'polar':
+            thetas = np.linspace(sub_data.theta_i,
+                                 sub_data.theta_f,
+                                 self.size*sampling)
+            rhos = ellipsis_radius(thetas, sub_data.a, sub_data.b,
+                                   sub_data.phi_y)
 
-        xs = rhos * np.cos(thetas) + sub_data.x0
-        ys = rhos * np.sin(thetas) + sub_data.y0
-        zs = np.ones_like(rhos) * sub_data.z0
+            xs = rhos * np.cos(thetas) + sub_data.x0
+            ys = rhos * np.sin(thetas) + sub_data.y0
+        elif self.method == 'cartesian':
+            t0 = np.int(self.segment.loc[start, 't'])
+            t1 = np.int(self.segment.loc[stop, 't'])
+            ts = np.linspace(t0, t1,
+                             self.size*sampling)
+            xs, ys = ellipsis_cartes(ts, sub_data.a, sub_data.b,
+                                     sub_data.omega, sub_data.phi_x,
+                                     sub_data.phi_y,
+                                     sub_data.x0, sub_data.y0)
+
+        zs = np.ones_like(xs) * sub_data.z0
         segdata = self.segment.loc[start:stop][self.coords]
         pca = PCA()
         pca.fit(segdata)
@@ -217,27 +231,33 @@ def fit_arc_ellipse(segment, start, stop,
     to_fit['t'] = sub_segment.t
 
     # initial guesses
-    a0 = to_fit['x'].ptp()
-    b0 = to_fit['y'].ptp()
-    phi_y_x0 , phi_y0 = 0., 0.
+    a0 = to_fit['x'].ptp() / 2.
+    b0 = to_fit['y'].ptp() / 2.
+    phi_y0 = 0.
     x00, y00 = 0, 0
     params0 = [a0, b0, phi_y0, x00, y00]
     if method == 'polar':
+        log.debug('Using polar method')
         fit_output = leastsq(residuals_polar, params0, [to_fit.x, to_fit.y],
                              full_output=1)
     elif method == 'cartesian':
+        log.debug('Using cartesian method')
         thetas = np.arctan2(to_fit.y, to_fit.x)
         dthetas, thetas = continuous_theta(thetas)
-        omega0 = (thetas[-1] - thetas[0]) / to_fit.t.ptp()
+
+        omega0 = thetas.ptp() / to_fit.t.ptp()
+        phi_x0 = 0
         params0.append(omega0)
-        #params0.append(0) ### phi_y_x
+        params0.append(phi_x0)
         fit_output = leastsq(residuals_cartesian, params0,
                              [to_fit.x, to_fit.y, to_fit.t],
                              full_output=1)
-
+    else:
+        raise ValueError('''method argument {} not understood
+                         should be "polar" or "cartesian" '''.format(method))
     if fit_output[-1] not in (1, 2, 3, 4):
         log.debug(
-            '''Leastsquare failed between {} and {} '''.format(start, stop))
+            '''Leastsquare failed between {} and {}'''.format(start, stop))
         log.debug(fit_output[-2])
         if return_rotated:
             return None, None, None
@@ -250,12 +270,16 @@ def fit_arc_ellipse(segment, start, stop,
         a, b, phi_y, x0, y0 = params
     elif method == 'cartesian':
         #a, b, phi_y, x0, y0, omega, phi_y_x = params
-        a, b, phi_y, x0, y0, omega = params
+        a, b, phi_y, x0, y0, omega, phi_x = params
 
     ### Fit parameters
     fit_data['a'] = a
     fit_data['b'] = b
     fit_data['phi_y'] = phi_y
+    if method == 'cartesian':
+        fit_data['phi_x'] = phi_x
+    else:
+        fit_data['phi_x'] = phi_y
     fit_data['x0'] = x0
     fit_data['y0'] = y0
     z0 = to_fit.z.loc[start:stop].mean()
@@ -300,22 +324,19 @@ def fit_arc_ellipse(segment, start, stop,
 def residuals_cartesian(params, data):
 
     #a, b, phi_y, x0, y0, omega, phi_y_x = params
-    a, b, phi_y, x0, y0, omega = params
+    a, b, phi_y, x0, y0, omega, phi_x = params
     x, y, t = data
-    fit_x, fit_y = ellipsis_cartes(t, a, b, omega, phi_y, x0, y0)
+    fit_x, fit_y = ellipsis_cartes(t, a, b, omega, phi_x, phi_y, x0, y0)
     res_x = x - fit_x
     res_y = y - fit_y
     return np.hstack((res_y, res_x))
 
-def ellipsis_cartes(t, a, b, omega, phi_y, x0, y0):
+def ellipsis_cartes(t, a, b, omega, phi_x, phi_y, x0, y0):
 
-    thetas = omega * t + phi_y
-    x = a * np.cos(thetas) + x0
-    y = b * np.sin(thetas) + y0
+    thetas = omega * t
+    x = a * np.cos(thetas + phi_x) + x0
+    y = b * np.sin(thetas + phi_y) + y0
     return x, y
-
-
-
 
 def residuals_polar(params, data):
     '''

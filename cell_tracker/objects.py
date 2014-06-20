@@ -279,7 +279,7 @@ class CellCluster:
 
         #self.oio['trajs'] = self.trajs
 
-    def compute_ellipticity(self, size=8,
+    def compute_ellipticity(self, size=8, method='polar',
                             cutoffs=ellipsis_cutoffs,
                             coords=['x_r', 'y_r', 'z_r']):
 
@@ -287,9 +287,12 @@ class CellCluster:
         if not hasattr(self, 'ellipses'):
             self.ellipses = {}
         grouped = self.trajs.groupby(level='label')
+        t_step = self.metadata['TimeIncrement']
         _ellipses = grouped.apply(evaluate_ellipticity,
                                   size=size, cutoffs=cutoffs,
-                                  coords=coords)
+                                  method=method,
+                                  coords=coords,
+                                  t_step=t_step)
         self.ellipses[size] = _ellipses.sortlevel(level='t_stamp')
         self.oio['ellipses_%i' %size] = self.ellipses[size]
 
@@ -404,7 +407,7 @@ def _get_segment_rotations(segment, data, method):
                 start = sub_data[sub_data['size'] == size].loc[t_stamp, 'start']
                 stop =  sub_data[sub_data['size'] == size].loc[t_stamp, 'stop']
                 if method == 'score':
-                    detected_rotations.loc[t_stamp] += 1. / n_sizes
+                    detected_rotations.loc[np.int(start): np.int(stop)] += 1. / n_sizes
                 elif method == 'binary':
                     detected_rotations.loc[np.int(start): np.int(stop)] = 1
                 else:
@@ -414,15 +417,19 @@ def _get_segment_rotations(segment, data, method):
 
 def evaluate_ellipticity(segment, size=0,
                          cutoffs=ellipsis_cutoffs,
+                         method='polar',
                          data=None,
-                         coords=['x_r', 'y_r', 'z_r']):
+                         coords=['x_r', 'y_r', 'z_r'],
+                         t_step=1):
     '''
     Fits an ellipse over a windows of size `size` in minutes
     '''
     ellipses = Ellipses(segment=segment, size=size,
-                         cutoffs=ellipsis_cutoffs,
-                         data=None,
-                         coords=['x_r', 'y_r', 'z_r'])
+                        cutoffs=ellipsis_cutoffs,
+                        method=method,
+                        data=None,
+                        t_step=t_step,
+                        coords=['x_r', 'y_r', 'z_r'])
     return ellipses.data
 
 def continuous_theta_(segment):
