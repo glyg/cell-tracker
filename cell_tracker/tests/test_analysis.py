@@ -30,7 +30,7 @@ def get_mock_ellipsis_segment(radius=30, dtheta=4*np.pi/3,
     return segment
 
 
-def test_simple_ellipis_fit():
+def test_simple_ellipis_fit_polar():
 
     segment =  get_mock_ellipsis_segment()
     start = segment.index[0]
@@ -45,3 +45,17 @@ def test_simple_ellipis_fit():
     chi2 = np.exp(-fit_data['gof'])
     np.testing.assert_almost_equal(chi2, 0, decimal=3)
 
+def test_simple_ellipis_fit_cartes():
+
+    segment =  get_mock_ellipsis_segment()
+    start = segment.index[0]
+    stop = segment.index[-1]
+    fit_data, components, rotated = fit_arc_ellipse(segment,
+                                                    start, stop,
+                                                    ['x', 'y', 'z'],
+                                                    method='cartesian',
+                                                    return_rotated=True)
+
+    assert fit_data is not None
+    chi2 = np.exp(-fit_data['gof'])
+    np.testing.assert_almost_equal(chi2, 0, decimal=3)

@@ -10,6 +10,7 @@ from .objects import build_iterator, CellCluster
 from . import ui
 
 from . import graphics
+from . import translation
 
 from .detection import inspect_stack, show_histogram
 from .detection import guess_preprocess

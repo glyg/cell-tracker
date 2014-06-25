@@ -446,8 +446,8 @@ def show_ellipses(cluster,
                         data=data,
                         method=method,
                         coords=list(coords))
-
-    for idx in ellipses.good_indices(cutoffs):
+    good_indexes = ellipses.good_indices(cutoffs)
+    for idx in good_indexes:
         log.debug(
             'Good ellipse: size {}, label {}, time stamp {}'.format(size, label, idx))
         curve = ellipses.evaluate(idx)
@@ -802,3 +802,22 @@ def center_traj_over_img(tracker, dsRed_dir, gfp_dir):
     ax.set_ylim(rfp0.shape[0], 0)
     return fig, ax
 
+def show_measure(cluster, measure, errorbar=True,
+                 show_segments=False, ax=None, **kwargs):
+    if ax is None:
+        fig, ax = plt.subplots()
+    if errorbar:
+        ax.errorbar(measure.t.mean(level='t_stamp'),
+                    measure.data.mean(level='t_stamp'),
+                    yerr=measure.data.std(level='t_stamp'), **kwargs)
+
+    else:
+        ax.plot(measure.t.mean(level='t_stamp'),
+                measure.data.mean(level='t_stamp'),  **kwargs)
+    if not show_segments:
+        return ax
+    colors = cluster.trajs.get_colors()
+    for label in cluster.trajs.labels:
+        sub_data = measure.xs(label, level='label')
+        ax.plot(sub_data.t, sub_data.data, '-', c=colors[label], alpha=0.2)
+    return ax

@@ -183,13 +183,14 @@ class Ellipses():
         max_r = cutoffs['max_radius']
         min_r = cutoffs['min_radius']
 
-        return self.data[self.max_ellipticity(max_e)
+        index = self.data[self.max_ellipticity(max_e)
                          & self.min_gof(min_g)
                          & self.max_dtheta(max_d)
                          & self.min_dtheta(min_d)
                          & self.max_radius(max_r)
                          & self.min_radius(min_r)].index
-
+        log.debug(index)
+        return index
 
 def fit_arc_ellipse(segment, start, stop,
                     coords=['x_r', 'y_r', 'z_r'],
@@ -238,13 +239,13 @@ def fit_arc_ellipse(segment, start, stop,
     params0 = [a0, b0, phi_y0, x00, y00]
     if method == 'polar':
         log.debug('Using polar method')
-        fit_output = leastsq(residuals_polar, params0, [to_fit.x, to_fit.y],
+        fit_output = leastsq(residuals_polar, params0,
+                             [to_fit.x, to_fit.y],
                              full_output=1)
     elif method == 'cartesian':
         log.debug('Using cartesian method')
         thetas = np.arctan2(to_fit.y, to_fit.x)
         dthetas, thetas = continuous_theta(thetas)
-
         omega0 = thetas.ptp() / to_fit.t.ptp()
         phi_x0 = 0
         params0.append(omega0)
@@ -271,7 +272,8 @@ def fit_arc_ellipse(segment, start, stop,
     elif method == 'cartesian':
         #a, b, phi_y, x0, y0, omega, phi_y_x = params
         a, b, phi_y, x0, y0, omega, phi_x = params
-
+        x0 = x0# + r_center[0]
+        y0 = y0# + r_center[1]
     ### Fit parameters
     fit_data['a'] = a
     fit_data['b'] = b
@@ -355,13 +357,19 @@ def ellipsis_radius(thetas, a, b, phi_y):
 
     Paramters
     ---------
-    thetas: ndarray
+    thetas : ndarray
         Angles in radians, in a polar coordiante system) for which the
         ellipses radius is to be computed
-    a, b: floats
+    a, b : floats
         The major and minor radii of the ellipsis
-    phi_y: float
-        Ellipsis phase respectively
+    phi_y : float
+        Ellipsis phase
+
+    Returns
+    -------
+
+    rhos : ndarray
+        The radii corresponding to the passed `thetas`
     '''
     rhos = a * b / np.sqrt((b * np.cos(thetas + phi_y))**2
                            + (a * np.sin(thetas + phi_y))**2)

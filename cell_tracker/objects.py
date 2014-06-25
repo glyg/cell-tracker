@@ -238,7 +238,7 @@ class CellCluster:
         '''
         Performs a principal component analysis on the input data
         '''
-        if not df:
+        if df is None:
             df = self.trajs
         self.pca = PCA()
         pca_coords = [c + suffix for c in coords]
@@ -296,9 +296,9 @@ class CellCluster:
         self.ellipses[size] = _ellipses.sortlevel(level='t_stamp')
         self.oio['ellipses_%i' %size] = self.ellipses[size]
 
-    def detect_rotations(self, cutoffs, method='binary'):
+    def detect_rotations(self, cutoffs, sizes, method='binary'):
 
-        for size in self.ellipses.keys():
+        for size in sizes:
             ellipsis_df = self.ellipses[size]
             ellipsis = Ellipses(size, data=ellipsis_df)
             ellipsis.data['good'] =  np.zeros(ellipsis.data.shape[0])
@@ -321,32 +321,6 @@ class CellCluster:
         detected_rotations = detected_rotations.sortlevel(level='label')
         self.detected_rotations = detected_rotations.sortlevel(level='t_stamp')
 
-    def forward_displacement(self):
-
-        pca = PCA()
-        rotated = pca.fit_transform(self.trajs[['x', 'y', 'z']])
-        print('''Fraction of the movement's variance along the principal axis : {0:.1f}%'''
-              .format(pca.explained_variance_ratio_[0] * 100))
-        self.trajs['x_pca'] = rotated[:, 0]
-        self.trajs['y_pca'] = rotated[:, 1]
-        self.trajs['z_pca'] = rotated[:, 2]
-        self.save_trajs()
-        self.trajs = Trajectories(
-            self.trajs.groupby(level='label').apply(compute_displacement,
-                                                    coords=['x_pca', 'y_pca', 'z_pca']))
-
-        if not hasattr(self, 'averages'):
-            self.averages = pd.DataFrame(index=self.trajs.t_stamps)
-            self.averages['t'] = self.trajs['t'].mean(level='t_stamp')
-        self.averages['fwd_frac'] = self.trajs['fwd_frac'].mean(level='t_stamp')
-
-    def get_MSD(self):
-        '''
-        Compute the mean square displacement for each segment
-        '''
-        dts = self.trajs.t_stamps - self.trajs.t_stamps[0]
-        self.MSD = self.trajs.groupby(level='label').apply(compute_MSD, dts)
-        self.MSD['Dt'] = self.MSD.index.get_level_values('Dt_stamp')*self.metadata['TimeIncrement']
 
 
 def build_iterator(stackio, preprocess=None):
@@ -442,45 +416,4 @@ def continuous_theta_(segment):
     return segment
 
 #def forward_vec()
-
-
-def compute_displacement(segment, coords=['x', 'y', 'z']):
-    '''Computes the cumulated displacement of the segment given by
-
-    .. math::
-    \begin{aligned}
-    D(0) &= 0\\
-    D(t) &= \sum_{i=1}^{t} \left((x_i - x_{i-1})^2 + (y_i - y_{i-1})^2 + (z_i - z_{i-1})^2\right)^{1/2}\\
-    \end{aligned}
-
-    '''
-    x, y, z = coords
-    displacement = np.sqrt(segment[x].diff()**2
-                           + segment[y].diff()**2
-                           + segment[z].diff()**2)
-    displacement = displacement.cumsum()
-    segment['disp'] = displacement
-    segment['fwd_frac'] = (segment[x] - segment[x].iloc[0]) / segment['disp']
-
-    return segment
-
-def compute_MSD(segment, dts, coords=['x', 'y', 'z']):
-    '''Computes the mean square displacement of the segment given by
-
-    .. math::
-    \begin{aligned}
-    \mbox{MSD}(\Delta t) &=  \frac{\sum_0^{T - \Delta t}
-        \left(\mathbf{r}(t + \Delta t)  - \mathbf{r}(t) \right)^2}{(T - \Delta t) / \delta t}
-    \end{aligned}
-    '''
-    dts = np.asarray(dts, dtype=np.int)
-    msds = pd.DataFrame(index=pd.Index(dts, name='Dt_stamp'),
-                        columns=['MSD', 'MSD_std'], dtype=np.float)
-    msds.loc[0] = 0, 0
-    for dt in dts[1:]:
-        msd = ((segment[coords]
-                - segment[coords].shift(dt)).dropna()**2).sum(axis=1)
-        msds.loc[dt, 'MSD'] = msd.mean()
-        msds.loc[dt, 'MSD_std'] = msd.std()
-    return msds
 
