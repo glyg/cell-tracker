@@ -10,11 +10,27 @@ import numpy as np
 import pandas as pd
 from sktracker.trajectories import Trajectories
 
-
 def shifted_dif(df, coords, shift):
     left_shift = -np.floor(shift/2).astype(np.int)
     right_shift = np.ceil(shift/2).astype(np.int)
     return df[coords].shift(left_shift) - df[coords].shift(right_shift)
+
+
+def p2P_dif(segment, coords, t_stamp0, t_stamp1):
+    return df[coords].loc[t_stamp1] - df[coords].loc[t_stamp0]
+
+
+def p2p_directionality(cluster, frame0, frame1):
+    shifted = cluster.trajs.groupby(level='label').apply(p2p_dif,
+                                                         ['x_pca', 'y_pca', 'z_pca'],
+                                                         t_stamp0, t_stamp1)
+
+    shifted['data'] = (shifted.x_pca /
+                       np.linalg.norm(shifted[['x_pca', 'y_pca', 'z_pca']],
+                                      axis=1))
+    return shifted['data']
+
+
 
 def directionality(cluster, window):
     shifted = cluster.trajs.groupby(level='label').apply(shifted_dif,
