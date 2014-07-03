@@ -64,7 +64,7 @@ class CellCluster:
             pass
         self._get_ellipses()
         ### Scaling lock
-        self.was_scaled = None
+        self.was_scaled = True
 
 
     def _complete_metadata(self):
