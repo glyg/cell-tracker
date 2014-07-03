@@ -17,7 +17,7 @@ def continuous_theta(thetas):
 
     if thetas.shape[0] == 1:
         dthetas = 0
-        return thetas, dthetas
+        return dthetas, thetas
     theta0 =  thetas[0]
     dthetas = np.concatenate(([0], np.diff(thetas)))
     dthetas[dthetas > np.pi] -= 2 * np.pi

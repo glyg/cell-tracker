@@ -16,21 +16,48 @@ def shifted_dif(df, coords, shift):
     return df[coords].shift(left_shift) - df[coords].shift(right_shift)
 
 
-def p2P_dif(segment, coords, t_stamp0, t_stamp1):
-    return df[coords].loc[t_stamp1] - df[coords].loc[t_stamp0]
+def p2p_dif(segment, coords, t_stamp0, t_stamp1):
+    return segment[coords].loc[t_stamp1] - segment[coords].loc[t_stamp0]
 
 
-def p2p_directionality(cluster, frame0, frame1):
-    shifted = cluster.trajs.groupby(level='label').apply(p2p_dif,
-                                                         ['x_pca', 'y_pca', 'z_pca'],
-                                                         t_stamp0, t_stamp1)
+def p2p_cum_directionality(cluster, t_stamp0, t_stamp1):
+    #window = int(window / cluster.metadata['TimeIncrement'])
+    shifted = cluster.trajs.groupby(level='label',
+                                    group_keys=False).apply(p2p_dif,
+                                                            ['x_pca', 'disp'],
+                                                            t_stamp0, t_stamp1)
+    shifted['data'] = shifted['x_pca'] / shifted['disp']
+    return shifted['data']
+
+
+
+def p2p_directionality(cluster, t_stamp0, t_stamp1):
+    shifted = cluster.trajs.groupby(level='label',
+                                    group_keys=False).apply(p2p_dif,
+                                                            ['x_pca', 'y_pca', 'z_pca'],
+                                                            t_stamp0, t_stamp1)
 
     shifted['data'] = (shifted.x_pca /
                        np.linalg.norm(shifted[['x_pca', 'y_pca', 'z_pca']],
                                       axis=1))
     return shifted['data']
 
+def p2p_processivity(cluster, t_stamp0, t_stamp1, signed=True):
 
+    cluster.trajs = Trajectories(
+        cluster.trajs.groupby(level='label').apply(compute_displacement,
+                                                   coords=['x', 'y', 'z']))
+    shifted = cluster.trajs.groupby(level='label',
+                                    group_keys=False).apply(p2p_dif,
+                                                            ['x_pca', 'y_pca', 'z_pca', 'disp'],
+                                                            t_stamp0, t_stamp1)
+    if signed:
+        shifted['data'] = (np.linalg.norm(shifted[['x_pca', 'y_pca', 'z_pca']], axis=1) /
+                                   shifted['disp']) * np.sign(shifted['x_pca'])
+    else:
+        shifted['data'] = (np.linalg.norm(shifted[['x_pca', 'y_pca', 'z_pca']], axis=1) /
+                                   shifted['disp'])
+    return shifted['data']
 
 def directionality(cluster, window):
     shifted = cluster.trajs.groupby(level='label').apply(shifted_dif,
@@ -43,18 +70,22 @@ def directionality(cluster, window):
                                         axis=1))
     return shifted[['t', 'data']]
 
-def processivity(cluster, window):
+def processivity(cluster, window, signed=True):
     cluster.trajs = Trajectories(
         cluster.trajs.groupby(level='label').apply(compute_displacement,
                                                    coords=['x', 'y', 'z']))
     shifted = cluster.trajs.groupby(level='label').apply(shifted_dif,
-                                                         ['x', 'y', 'z', 'disp'], window)
-    shifted['data'] = (np.linalg.norm(shifted[['x', 'y', 'z']], axis=1) /
-                               shifted['disp'])
+                                                         ['x_pca', 'y_pca', 'z_pca', 'disp'], window)
+    if signed:
+        shifted['data'] = (np.linalg.norm(shifted[['x_pca', 'y_pca', 'z_pca']], axis=1) /
+                                   shifted['disp']) * np.sign(shifted['x_pca'])
+    else:
+        shifted['data'] = (np.linalg.norm(shifted[['x_pca', 'y_pca', 'z_pca']], axis=1) /
+                                   shifted['disp'])
     shifted['t'] = cluster.trajs.t
     return shifted[['t', 'data']]
 
-def cumulative_directionality(cluster, window=6):
+def cumulative_directionality(cluster, window):
     #window = int(window / cluster.metadata['TimeIncrement'])
     cluster.trajs = Trajectories(
         cluster.trajs.groupby(level='label').apply(compute_displacement,
@@ -101,6 +132,7 @@ def compute_displacement(segment, coords=['x', 'y', 'z']):
                            + segment[y].diff()**2
                            + segment[z].diff()**2)
     displacement = displacement.cumsum()
+    displacement.iloc[0] = 0
     segment['disp'] = displacement
     #segment['fwd_frac'] = (segment[x] - segment[x].iloc[0]) / segment['disp']
     return segment

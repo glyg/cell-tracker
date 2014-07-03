@@ -307,9 +307,9 @@ class CellCluster:
                 ellipsis_df.loc[goods, 'good'] = 1.
             ellipsis_df['size'] = size
 
-        data = pd.concat([ellipsis_df[['start', 'stop', 'gof', 'radius',
-                                       'dtheta', 'good', 'size']].astype(np.float)
-                          for ellipsis_df in self.ellipses.values()]).dropna()
+        data = pd.concat([self.ellipses[size][['start', 'stop', 'gof', 'radius',
+                                               'dtheta', 'good', 'size']].astype(np.float)
+                          for size in sizes]).dropna()
         data = data.replace([np.inf, -np.inf], np.nan).dropna()
         data.sort_index(axis=0, inplace=True)
         data.sort_index(axis=1, inplace=True)
@@ -408,7 +408,7 @@ def evaluate_ellipticity(segment, size=0,
 
 def continuous_theta_(segment):
     '''
-    Computes a continuous angle from a 2*np.pi periodic one
+    Computes a continuous angle from a :math:`2*\pi` periodic one
     '''
     dthetas, thetas = continuous_theta(segment.theta.values)
     segment['dtheta'] = dthetas

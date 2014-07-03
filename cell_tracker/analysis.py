@@ -32,7 +32,7 @@ fit_data_names = ['a', 'b', 'phi_y',
 plane_components = ['r0_x', 'r0_y', 'r0_z',
                     'r1_x', 'r1_y', 'r1_z']
 
-start_stop = ['start', 'stop']
+start_stop = ['start', 'stop', 'size']
 columns = list(fit_data_names) # Make a copy (`copy` list attribute is python3 only)
 columns.extend(plane_components)
 
@@ -63,7 +63,10 @@ class Ellipses():
         elif segment is not None:
             self.do_fits(cutoffs)
         else:
-            self.data = pd.DataFrame()
+            self.data = pd.DataFrame(index=self.segment.index,
+                                     columns=columns, dtype=np.float)
+        if not 'size' in self.data.columns:
+            self.data['size'] = self.size
 
     def do_fits(self, cutoffs):
 
