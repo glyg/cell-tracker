@@ -38,12 +38,6 @@ columns.extend(plane_components)
 
 columns.extend(start_stop)
 
-
-def scale(trajs, pix_sizex, pix_sizey,
-          pix_sizez, inplace=False):
-    log.warning('''Deprecated, use `trajs.scale` instead''')
-    return trajs.scale([pix_sizex, pix_sizey, pix_sizez], inplace=inplace)
-
 class Ellipses():
 
     def __init__(self, size=0,
@@ -194,6 +188,8 @@ class Ellipses():
                          & self.min_radius(min_r)].index
         log.debug(index)
         return index
+
+
 
 def fit_arc_ellipse(segment, start, stop,
                     coords=['x_r', 'y_r', 'z_r'],
