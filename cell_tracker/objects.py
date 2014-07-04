@@ -15,6 +15,7 @@ log = logging.getLogger(__name__)
 
 from sktracker.detection import nuclei_detector
 from sktracker.trajectories import Trajectories
+from sktracker.trajectories.measures.decomposition import do_pca
 from sktracker.io import ObjectsIO, StackIO
 
 from .tracking import track_cells
@@ -234,31 +235,24 @@ class CellCluster:
 
     def do_pca(self, df=None, ndims=3,
                coords=['x', 'y', 'z'],
-               suffix='_pca'):
+               suffix='_pca', append=True):
         '''
         Performs a principal component analysis on the input data
         '''
         if df is None:
             df = self.trajs
-        self.pca = PCA()
-        pca_coords = [c + suffix for c in coords]
-        if ndims == 2:
-            coords = coords[:2]
-            pca_coords = pca_coords[:2]
-        try:
-            rotated = self.pca.fit_transform(df[coords])
-        except ValueError:
-            raise ('''Remove non finite values before you attempt to perform PCA''')
-        for n, coord in enumerate(pca_coords):
-            df[coord] = rotated[:, n]
-        return df
+        rotated, self.pca = do_pca(df, pca=None,
+                                   coords=coords,
+                                   suffix=suffix,
+                                   append=True, return_pca=True)
+        return rotated
 
     def cumulative_angle(self):
         '''
         Computes the angle of each cell with respect to the cluster center
 
         '''
-        self.trajs = Trajectories(self.trajs.dropna())
+        #sself.trajs = Trajectories(self.trajs.dropna())
         self.do_pca(coords=['x_r', 'y_r', 'z_r'])
         self.trajs['theta'] = np.arctan2(self.trajs['y_r_pca'],
                                          self.trajs['x_r_pca'])
