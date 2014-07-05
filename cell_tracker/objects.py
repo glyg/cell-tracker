@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 from sktracker.detection import nuclei_detector
 from sktracker.trajectories import Trajectories
-from sktracker.trajectories.measures.decomposition import do_pca
+from sktracker.trajectories.measures.transformation import do_pca
 from sktracker.io import ObjectsIO, StackIO
 
 from .tracking import track_cells
