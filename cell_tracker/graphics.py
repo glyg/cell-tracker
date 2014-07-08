@@ -802,22 +802,46 @@ def center_traj_over_img(tracker, dsRed_dir, gfp_dir):
     ax.set_ylim(rfp0.shape[0], 0)
     return fig, ax
 
-def show_measure(cluster, measure, errorbar=True,
+def show_measure(trajs, measure, errorbar=True,
                  show_segments=False, ax=None, **kwargs):
+    data_cols = [col for col in measure if col != 't']
     if ax is None:
         fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
+    time = measure.t
+    n_measures = len(data_cols)
+    if n_measures > 0:
+        plt.clf()
+    for i, col in enumerate(data_cols):
+        if n_measures > 1:
+            sub_ax = fig.add_subplot(n_measures, 1, i+1)
+        else:
+            sub_ax = ax
+        data = measure[col]
+        _show_single_measure(trajs, time, data,
+                             errorbar=errorbar,
+                             show_segments=show_segments,
+                             ax=sub_ax, **kwargs)
+    return ax
+
+def _show_single_measure(trajs, time, data,
+                         errorbar=True, show_segments=True,
+                         ax=None, **kwargs):
+
     if errorbar:
-        ax.errorbar(measure.t.mean(level='t_stamp'),
-                    measure.data.mean(level='t_stamp'),
-                    yerr=measure.data.std(level='t_stamp'), **kwargs)
+        ax.errorbar(time.mean(level='t_stamp'),
+                    data.mean(level='t_stamp'),
+                    yerr=data.std(level='t_stamp'), **kwargs)
 
     else:
-        ax.plot(measure.t.mean(level='t_stamp'),
-                measure.data.mean(level='t_stamp'),  **kwargs)
+        ax.plot(time.mean(level='t_stamp'),
+                data.mean(level='t_stamp'),  **kwargs)
     if not show_segments:
         return ax
-    colors = cluster.trajs.get_colors()
-    for label in cluster.trajs.labels:
-        sub_data = measure.xs(label, level='label')
-        ax.plot(sub_data.t, sub_data.data, '-', c=colors[label], alpha=0.2)
+    colors = trajs.get_colors()
+    for label in trajs.labels:
+        sub_data = data.xs(label, level='label')
+        sub_time = time.xs(label, level='label')
+        ax.plot(sub_time, sub_data, '-', c=colors[label], alpha=0.2)
     return ax

@@ -148,7 +148,7 @@ def load_multiple_excel(data_path):
                               global_metadata['Value'])}
 
     clusters = {}
-
+    global_metadata['FileName'] = global_metadata['FileName'].replace(' ', '')
     for i, name in enumerate(global_metadata['FileName'].split(',')):
 
         ### Read the data

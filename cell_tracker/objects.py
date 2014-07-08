@@ -8,7 +8,6 @@ from __future__ import print_function
 
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import PCA
 
 import logging
 log = logging.getLogger(__name__)
@@ -16,6 +15,8 @@ log = logging.getLogger(__name__)
 from sktracker.detection import nuclei_detector
 from sktracker.trajectories import Trajectories
 from sktracker.trajectories.measures.transformation import do_pca
+from sktracker.trajectories.measures.rotation import get_polar_coords
+
 from sktracker.io import ObjectsIO, StackIO
 
 from .tracking import track_cells
@@ -165,8 +166,10 @@ class CellCluster:
         return trajs_pixels
 
 
-    def get_center(self, coords=['x', 'y', 'z'], smooth=0,
-                   append=True, relative=True):
+    def get_center(self, coords=['x', 'y', 'z'],
+                   center_label=None,
+                   smooth=0,
+                   append=True):
         """Computes `self.center`, the average positions (time stamp wise).
 
         If `append` is True, appends columns named after the passed
@@ -193,7 +196,18 @@ class CellCluster:
 
         sktracker.Trajectories.time_interpolate
         """
-        if not smooth:
+        if '/center' in self.oio.keys():
+            self.center = self.oio['center']
+            log.info('Loading center trajcetory from HDFStore')
+        elif center_label is not None:
+            self.center = self.trajs[coords].xs(center_label, level='label')
+            self.oio['center'] = self.center
+            self.trajs.drop(center_label, level='label', inplace=True)
+            self.trajs = Trajectories(
+                self.trajs.set_index(self.trajs.index.drop(center_label, level='label')))
+            log.info('Center trajectory dropped and wrote to HDFStore')
+            self.oio['trajs'] = self.trajs
+        elif not smooth:
             self.center = self.trajs[coords].mean(axis=0, level='t_stamp')
         else:
             interpolated = self.trajs.time_interpolate(coords=coords, s=smooth)
@@ -201,7 +215,6 @@ class CellCluster:
         if append:
             new_cols = [c+'_c' for c in coords]
             self.trajs[new_cols] = self._reindexed_center()
-        if relative:
             relative_coords = [c+'_r' for c in coords]
             self.trajs[relative_coords] = self.trajs[coords] - self._reindexed_center()
         if not hasattr(self, 'averages'):
@@ -253,16 +266,11 @@ class CellCluster:
 
         '''
         #sself.trajs = Trajectories(self.trajs.dropna())
-        self.do_pca(coords=['x_r', 'y_r', 'z_r'])
-        self.trajs['theta'] = np.arctan2(self.trajs['y_r_pca'],
-                                         self.trajs['x_r_pca'])
-        self.trajs['rho'] = np.hypot(self.trajs['y_r_pca'],
-                                     self.trajs['x_r_pca'])
+        rotated = do_pca(self.trajs, coords=['x_r', 'y_r', 'z_r'])
+        polar = get_polar_coords(self.trajs, get_dtheta=False, in_coords=['x_r', 'y_r'])
 
-        grouped = self.trajs.groupby(level='label', as_index=False)
-        tmp_trajs = grouped.apply(continuous_theta_)
-        tmp_trajs = tmp_trajs.sortlevel('t_stamp')
-        self.trajs = Trajectories(tmp_trajs)
+        self.trajs['theta'] = polar['theta']
+        self.trajs['rho'] = polar['rho']
         self.theta_bin_count, self.theta_bins = np.histogram(
             self.trajs['theta'].dropna().astype(np.float),
             bins=np.linspace(-4*np.pi, 4*np.pi, 4 * 12 + 1))
