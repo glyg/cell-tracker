@@ -68,7 +68,6 @@ class CellCluster:
         ### Scaling lock
         self.was_scaled = True
 
-
     def _complete_metadata(self):
         shape = self.metadata['Shape']
 
