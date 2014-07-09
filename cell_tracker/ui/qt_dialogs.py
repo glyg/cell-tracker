@@ -43,7 +43,8 @@ def get_multiple_clusters(default_path):
         cellclusters = {}
         for data_path in data_paths:
            cluster = io.get_cluster(data_path)
-           cellclusters[os.path.basename(cluster.oio.store_path)] = cluster
+           name = os.path.basename(cluster.oio.store_path).split('.')[-2]
+           cellclusters[name] = cluster
     return cellclusters
 
 def get_datasets(default='.', ext_filter='*.*'):
