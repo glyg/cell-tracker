@@ -282,13 +282,20 @@ class CellCluster:
 
     def compute_ellipticity(self, size=8, method='polar',
                             cutoffs=ellipsis_cutoffs,
+                            sampling=1, smooth=0,
                             coords=['x_r', 'y_r', 'z_r']):
 
         #cor_size = np.int(size / self.metadata['TimeIncrement'])
         if not hasattr(self, 'ellipses'):
             self.ellipses = {}
-        grouped = self.trajs.groupby(level='label')
-        t_step = self.metadata['TimeIncrement']
+        if sampling == 1 and smooth == 0:
+            grouped = self.trajs.groupby(level='label')
+        else:
+            interpolated = self.trajs.time_interpolate(sampling,
+                                                       s=smooth,
+                                                       coords=coords)
+            grouped = interpolated.groupby(level='label')
+        t_step = self.metadata['TimeIncrement'] / sampling
         _ellipses = grouped.apply(evaluate_ellipticity,
                                   size=size, cutoffs=cutoffs,
                                   method=method,
@@ -315,13 +322,12 @@ class CellCluster:
         data.sort_index(axis=0, inplace=True)
         data.sort_index(axis=1, inplace=True)
         detected_rotations = self.trajs.groupby(
-            level='label').apply(_get_segment_rotations, data, method)
+            level='label', group_keys=False).apply(_get_segment_rotations, data, method)
         if detected_rotations.ndim == 2:
             detected_rotations = detected_rotations.stack()
         detected_rotations = detected_rotations.swaplevel('label', 't_stamp')
         detected_rotations = detected_rotations.sortlevel(level='label')
         self.detected_rotations = detected_rotations.sortlevel(level='t_stamp')
-
 
 
 def build_iterator(stackio, preprocess=None):
@@ -362,12 +368,12 @@ def _get_segment_rotations(segment, data, method):
     t1 = segment.index.get_level_values('t_stamp')[-1]
 
     detected_rotations = pd.Series(data=0,
-                                   index=pd.Index(np.arange(t0, t1), name='t_stamp'),
+                                   index=segment.index, #pd.Index(np.arange(t0, t1), name='t_stamp'),
                                    name='detected_rotations')
     try:
         sub_data = data.xs(label, level='label')
     except KeyError:
-        detected_rotations[:] = np.nan
+        detected_rotations.loc[:] = np.nan
         return detected_rotations
 
     sizes = data['size'].unique()

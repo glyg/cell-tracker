@@ -79,11 +79,11 @@ class Ellipses():
             return self.data
 
         times  = self.segment.t
-        indices = times[times < times.iloc[-1] - self.size].index
+        indices = self.segment[times < times.iloc[-1] - self.size].index
         for idx in indices:
             start = idx[0]
-            midle = times[times <= times.loc[idx] + self.size/2].index[-1][0]
-            stop = times[times <= times.loc[idx] + self.size].index[-1][0]
+            midle = self.segment[times <= times.loc[idx] + self.size/2].index[-1][0]
+            stop = self.segment[times <= times.loc[idx] + self.size].index[-1][0]
             self.data.loc[midle, 'start'] = start
             self.data.loc[midle, 'stop'] = stop
             fit_data, components, rotated = fit_arc_ellipse(self.segment,

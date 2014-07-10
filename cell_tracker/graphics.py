@@ -65,10 +65,10 @@ def _scatter_single_segment(cluster, label, sizes, color, axes=None):
 
 
 
-def show_ellipses_clusters(cluster, sizes, cutoffs):
-
-    fig, axes = plt.subplots(2, 2, sharex='col',
-                            sharey='row', figsize=(12, 12))
+def show_ellipses_clusters(cluster, sizes, cutoffs, axes=None):
+    if axes is None:
+        fig, axes = plt.subplots(2, 2, sharex='col',
+                                 sharey='row', figsize=(12, 12))
 
     colors = cluster.trajs.get_colors()
     for label in cluster.trajs.labels:
@@ -365,7 +365,10 @@ def plot_rotation_events(cluster, ax=None,
         n_labels = cluster.trajs.labels.size
 
         for label in cluster.trajs.labels:
-            sub_dr = cluster.detected_rotations.xs(label, level='label')
+            try:
+                sub_dr = cluster.detected_rotations.xs(label, level='label')
+            except KeyError:
+                continue
             color = colors[label]
             ts = sub_dr.index.values
             ts *= cluster.metadata['TimeIncrement']
