@@ -398,6 +398,7 @@ def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
                          method='polar',
                          scatter_kw={}, line_kw={},
                          ellipsis_kw={},
+                         show_centers=False,
                          savefile=None, axes=None, ax_3d=None):
 
     coords=['x_r', 'y_r', 'z_r']
@@ -413,6 +414,7 @@ def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
                                     coords=coords,
                                     axes=axes, ax_3d=ax_3d,
                                     method=method,
+                                    show_centers=show_centers,
                                     **ellipsis_kw)
 
     for ax in axes.flatten():
@@ -430,6 +432,7 @@ def show_ellipses(cluster,
                   coords=['x_r', 'y_r', 'z_r'],
                   axes=None, ax_3d=None,
                   method='polar',
+                  show_centers=True,
                   **plot_kwargs):
 
     if axes is None:
@@ -460,6 +463,14 @@ def show_ellipses(cluster,
         axes[0, 1].plot(curve[:, 2], curve[:, 1], **plot_kwargs)
         axes[1, 0].plot(curve[:, 0], curve[:, 2], **plot_kwargs)
         ax_3d.plot(curve[:, 0], curve[:, 1], curve[:, 2], **plot_kwargs)
+
+    if show_centers:
+        axes[0, 0].plot(ellipses.data.loc[good_indexes]['x_ec'],
+                        ellipses.data.loc[good_indexes]['y_ec'], 'r+')
+        axes[0, 1].plot(ellipses.data.loc[good_indexes]['z_ec'],
+                        ellipses.data.loc[good_indexes]['y_ec'], 'r+')
+        axes[1, 0].plot(ellipses.data.loc[good_indexes]['x_ec'],
+                        ellipses.data.loc[good_indexes]['z_ec'], 'r+')
     return axes, ax_3d
 
 def show_n_panels(cluster, thumbs, time0,

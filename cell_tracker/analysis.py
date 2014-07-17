@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
@@ -216,7 +218,7 @@ def fit_arc_ellipse(segment, start, stop,
 
 
     pca = PCA()
-    sub_segment = segment.loc[start:stop]
+    sub_segment = segment.loc[start:stop].dropna()
     if sub_segment.shape[0] < 6:
         log.debug('''Not enough points to fit an ellipsis''')
         if return_rotated:

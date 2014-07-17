@@ -84,6 +84,11 @@ class CellCluster:
             if key not in self.metadata:
                 self.metadata[key] = val
 
+    # def interpolate(self, sampling=1, s=0, k=3, backup=True):
+    #     self.oio['raw'] = self.trajs
+    #     self.trajs = self.trajs.time_interpolate(sampling=sampling, s=s, k=k)
+
+
     @property
     def metadata(self):
         return self.oio.metadata
@@ -112,8 +117,8 @@ class CellCluster:
             z_stack = z_stack[np.newaxis, ...]
         return z_stack
 
-    def save_trajs(self):
-        self.oio['trajs'] = self.trajs
+    def save_trajs(self, trajs_name='trajs'):
+        self.oio['trajs_name'] = self.trajs
         if hasattr(self, 'averages'):
             self.oio['averages'] = self.averages
 
@@ -167,8 +172,8 @@ class CellCluster:
 
     def get_center(self, coords=['x', 'y', 'z'],
                    center_label=None,
-                   smooth=0,
-                   append=True):
+                   smooth=0, reset=False,
+                   append=True, trajs=None, save_droped='trajs'):
         """Computes `self.center`, the average positions (time stamp wise).
 
         If `append` is True, appends columns named after the passed
@@ -195,30 +200,35 @@ class CellCluster:
 
         sktracker.Trajectories.time_interpolate
         """
-        if '/center' in self.oio.keys():
+
+        if trajs is None:
+            trajs = self.trajs
+
+        if '/center' in self.oio.keys() and not reset:
             self.center = self.oio['center']
             log.info('Loading center trajcetory from HDFStore')
         elif center_label is not None:
-            self.center = self.trajs[coords].xs(center_label, level='label')
+            self.center = trajs[coords].xs(center_label, level='label')
             self.oio['center'] = self.center
-            self.trajs.drop(center_label, level='label', inplace=True)
-            self.trajs = Trajectories(
-                self.trajs.set_index(self.trajs.index.drop(center_label, level='label')))
+            trajs.drop(center_label, level='label', inplace=True)
+            trajs = Trajectories(
+                trajs.set_index(trajs.index.drop(center_label, level='label')))
             log.info('Center trajectory dropped and wrote to HDFStore')
-            self.oio['trajs'] = self.trajs
+            self.oio['trajs_back'] = self.trajs
+            self.oio[save_droped] = trajs
         elif not smooth:
-            self.center = self.trajs[coords].mean(axis=0, level='t_stamp')
+            self.center = trajs[coords].mean(axis=0, level='t_stamp')
         else:
-            interpolated = self.trajs.time_interpolate(coords=coords, s=smooth)
+            interpolated = trajs.time_interpolate(coords=coords, s=smooth)
             self.center =  interpolated[coords].mean(axis=0, level='t_stamp')
         if append:
             new_cols = [c+'_c' for c in coords]
-            self.trajs[new_cols] = self._reindexed_center()
+            trajs[new_cols] = self._reindexed_center(trajs)
             relative_coords = [c+'_r' for c in coords]
-            self.trajs[relative_coords] = self.trajs[coords] - self._reindexed_center()
+            trajs[relative_coords] = trajs[coords] - self._reindexed_center(trajs)
         if not hasattr(self, 'averages'):
-            self.averages = pd.DataFrame(index=self.trajs.t_stamps)
-            self.averages['t'] = self.trajs['t'].mean(level='t_stamp')
+            self.averages = pd.DataFrame(index=trajs.t_stamps)
+            self.averages['t'] = trajs['t'].mean(level='t_stamp')
         for c in coords:
             self.averages[c] = self.center[c]
 
@@ -242,59 +252,56 @@ class CellCluster:
         self.trajs = track_cells(self.trajs, **kwargs)
         self.oio['trajs'] = self.trajs
 
-    def _reindexed_center(self):
-        return self.center.reindex(self.trajs.index, level='t_stamp')
+    def _reindexed_center(self, trajs=None):
+        if trajs is None:
+            trajs = self.trajs
+        return self.center.reindex(trajs.index, level='t_stamp')
 
-    def do_pca(self, df=None, ndims=3,
+    def do_pca(self, trajs=None, ndims=3,
                coords=['x', 'y', 'z'],
                suffix='_pca', append=True):
         '''
         Performs a principal component analysis on the input data
         '''
-        if df is None:
-            df = self.trajs
-        rotated, self.pca = do_pca(df, pca=None,
+        if trajs is None:
+            trajs = self.trajs
+        rotated, self.pca = do_pca(trajs, pca=None,
                                    coords=coords,
                                    suffix=suffix,
                                    append=True, return_pca=True)
         return rotated
 
-    def cumulative_angle(self):
+    def cumulative_angle(self, trajs=None):
         '''
         Computes the angle of each cell with respect to the cluster center
 
         '''
+        if trajs is None:
+            trajs = self.trajs
         #sself.trajs = Trajectories(self.trajs.dropna())
-        rotated = do_pca(self.trajs, coords=['x_r', 'y_r', 'z_r'])
-        polar = get_polar_coords(self.trajs, get_dtheta=False, in_coords=['x_r', 'y_r'])
+        #rotated = do_pca(self.trajs, coords=['x_r', 'y_r', 'z_r'])
+        polar = get_polar_coords(trajs, get_dtheta=False, in_coords=['x_r', 'y_r'])
 
-        self.trajs['theta'] = polar['theta']
-        self.trajs['rho'] = polar['rho']
+        trajs['theta'] = polar['theta']
+        trajs['rho'] = polar['rho']
         self.theta_bin_count, self.theta_bins = np.histogram(
-            self.trajs['theta'].dropna().astype(np.float),
+            trajs['theta'].dropna().astype(np.float),
             bins=np.linspace(-4*np.pi, 4*np.pi, 4 * 12 + 1))
         if not hasattr(self, 'averages'):
-            self.averages = pd.DataFrame(index=self.trajs.t_stamps)
-            self.averages['t'] = self.trajs['t'].mean(level='t_stamp')
-        self.averages['theta'] = self.trajs['theta'].mean(level='t_stamp')
-
+            self.averages = pd.DataFrame(index=trajs.t_stamps)
+            self.averages['t'] = trajs['t'].mean(level='t_stamp')
+        self.averages['theta'] = trajs['theta'].mean(level='t_stamp')
+        return trajs
         #self.oio['trajs'] = self.trajs
 
     def compute_ellipticity(self, size=8, method='polar',
-                            cutoffs=ellipsis_cutoffs,
-                            sampling=1, smooth=0,
+                            cutoffs=ellipsis_cutoffs, trajs=None,
+                            sampling=1,
                             coords=['x_r', 'y_r', 'z_r']):
 
-        #cor_size = np.int(size / self.metadata['TimeIncrement'])
-        if not hasattr(self, 'ellipses'):
-            self.ellipses = {}
-        if sampling == 1 and smooth == 0:
-            grouped = self.trajs.groupby(level='label')
-        else:
-            interpolated = self.trajs.time_interpolate(sampling,
-                                                       s=smooth,
-                                                       coords=coords)
-            grouped = interpolated.groupby(level='label')
+        if trajs is None:
+            trajs = self.trajs
+        grouped = trajs.groupby(level='label')
         t_step = self.metadata['TimeIncrement'] / sampling
         _ellipses = grouped.apply(evaluate_ellipticity,
                                   size=size, cutoffs=cutoffs,
@@ -304,7 +311,9 @@ class CellCluster:
         self.ellipses[size] = _ellipses.sortlevel(level='t_stamp')
         self.oio['ellipses_%i' %size] = self.ellipses[size]
 
-    def detect_rotations(self, cutoffs, sizes, method='binary'):
+    def detect_rotations(self, cutoffs, sizes, method='binary', trajs=None):
+        if trajs is None:
+            trajs = self.trajs
 
         for size in sizes:
             ellipsis_df = self.ellipses[size]
@@ -321,7 +330,7 @@ class CellCluster:
         data = data.replace([np.inf, -np.inf], np.nan).dropna()
         data.sort_index(axis=0, inplace=True)
         data.sort_index(axis=1, inplace=True)
-        detected_rotations = self.trajs.groupby(
+        detected_rotations = trajs.groupby(
             level='label', group_keys=False).apply(_get_segment_rotations, data, method)
         if detected_rotations.ndim == 2:
             detected_rotations = detected_rotations.stack()
