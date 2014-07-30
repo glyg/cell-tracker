@@ -210,9 +210,10 @@ class CellCluster:
         elif center_label is not None:
             self.center = trajs[coords].xs(center_label, level='label')
             self.oio['center'] = self.center
-            trajs.drop(center_label, level='label', inplace=True)
-            trajs = Trajectories(
-                trajs.set_index(trajs.index.drop(center_label, level='label')))
+            trajs = trajs.drop(center_label,
+                               level='label',
+                               inplace=False).sortlevel('t_stamp', inplace=False)
+            trajs = Trajectories(trajs)
             log.info('Center trajectory dropped and wrote to HDFStore')
             self.oio['trajs_back'] = self.trajs
             self.oio[save_droped] = trajs
@@ -231,6 +232,7 @@ class CellCluster:
             self.averages['t'] = trajs['t'].mean(level='t_stamp')
         for c in coords:
             self.averages[c] = self.center[c]
+        return Trajectories(trajs.sortlevel(['t_stamp', 'label']))
 
     def detect_cells(self, preprocess, **kwargs):
         '''
@@ -335,8 +337,8 @@ class CellCluster:
         if detected_rotations.ndim == 2:
             detected_rotations = detected_rotations.stack()
         detected_rotations = detected_rotations.swaplevel('label', 't_stamp')
-        detected_rotations = detected_rotations.sortlevel(level='label')
-        self.detected_rotations = detected_rotations.sortlevel(level='t_stamp')
+        detected_rotations = detected_rotations.sortlevel(level=['t_stamp', 'label'])
+        self.detected_rotations = detected_rotations
 
 
 def build_iterator(stackio, preprocess=None):
