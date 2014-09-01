@@ -185,7 +185,9 @@ class CellCluster:
 
         coords : list of str, default `['x', 'y', 'z']`
             The coordinates on which to compute the center positions
-
+        center_label : int, optional, default None
+            The label of the original trajectory containing the center position,
+            if it was tracked or computed by other means
         smooth : float, default 0.
             A smoothing factor. If non zero, the argument is passed
             to the `time_interpolate` method of `self.trajs`
@@ -227,12 +229,10 @@ class CellCluster:
             trajs[new_cols] = self._reindexed_center(trajs)
             relative_coords = [c+'_r' for c in coords]
             trajs[relative_coords] = trajs[coords] - self._reindexed_center(trajs)
-        if not hasattr(self, 'averages'):
-            self.averages = pd.DataFrame(index=trajs.t_stamps)
-            self.averages['t'] = trajs['t'].mean(level='t_stamp')
-        for c in coords:
-            self.averages[c] = self.center[c]
-        return Trajectories(trajs.sortlevel(['t_stamp', 'label']))
+            return Trajectories(trajs.sortlevel(['t_stamp', 'label']))
+        else:
+            centered = trajs[coords] - self._reindexed_center(trajs)
+            return Trajectories(centered.sortlevel(['t_stamp', 'label']))
 
     def detect_cells(self, preprocess, **kwargs):
         '''
