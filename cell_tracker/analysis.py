@@ -89,9 +89,9 @@ class Ellipses():
             self.data.loc[midle, 'start'] = start
             self.data.loc[midle, 'stop'] = stop
             fit_data, components, rotated = fit_arc_ellipse(self.segment,
-                                                              start, stop, self.coords,
-                                                              method=self.method, ## 'polar' or 'cartesian'
-                                                              return_rotated=True)
+                                                            start, stop, self.coords,
+                                                            method=self.method, ## 'polar' or 'cartesian'
+                                                            return_rotated=True)
             if fit_data is None:
                 log.debug(
                     '''Fitting failed between {} and {} '''.format(start, stop))
@@ -140,7 +140,7 @@ class Ellipses():
                                      sub_data.x0, sub_data.y0)
 
         zs = np.ones_like(xs) * sub_data.z0
-        segdata = self.segment.loc[start:stop][self.coords]
+        segdata = self.segment.loc[start:stop][self.coords].dropna()
         pca = PCA()
         pca.fit(segdata)
         ellipsis_fit = pca.inverse_transform(np.vstack((xs, ys, zs)).T)
@@ -376,4 +376,3 @@ def ellipsis_radius(thetas, a, b, phi_y):
                            + (a * np.sin(thetas + phi_y))**2)
 
     return rhos
-

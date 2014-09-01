@@ -421,7 +421,7 @@ def evaluate_ellipticity(segment, size=0,
                         method=method,
                         data=None,
                         t_step=t_step,
-                        coords=['x_r', 'y_r', 'z_r'])
+                        coords=coords)
     return ellipses.data
 
 def continuous_theta_(segment):
@@ -434,4 +434,3 @@ def continuous_theta_(segment):
     return segment
 
 #def forward_vec()
-
