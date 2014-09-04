@@ -825,8 +825,6 @@ def show_measure(trajs, measure, errorbar=True,
         fig = ax.get_figure()
     time = measure.t
     n_measures = len(data_cols)
-    if n_measures > 0:
-        plt.clf()
     for i, col in enumerate(data_cols):
         if n_measures > 1:
             sub_ax = fig.add_subplot(n_measures, 1, i+1)

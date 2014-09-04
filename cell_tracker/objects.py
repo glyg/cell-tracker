@@ -232,6 +232,7 @@ class CellCluster:
             return Trajectories(trajs.sortlevel(['t_stamp', 'label']))
         else:
             centered = trajs[coords] - self._reindexed_center(trajs)
+            centered['t'] = trajs.t
             return Trajectories(centered.sortlevel(['t_stamp', 'label']))
 
     def detect_cells(self, preprocess, **kwargs):
