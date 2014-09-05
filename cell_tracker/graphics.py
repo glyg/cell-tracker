@@ -428,11 +428,12 @@ def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
 
 def show_ellipses(cluster,
                   label, size,
-                  cutoffs,
+                  cutoffs=None,
                   coords=['x_r', 'y_r', 'z_r'],
                   axes=None, ax_3d=None,
                   method='polar',
-                  show_centers=True,
+                  show_centers=False,
+                  return_lines_dict=False,
                   **plot_kwargs):
 
     if axes is None:
@@ -444,6 +445,7 @@ def show_ellipses(cluster,
             ax.set_aspect('equal')
         axes[1, 1].axis('off')
         ax_3d = fig.add_subplot(224, projection='3d')
+
     segments = cluster.trajs.get_segments()
     all_data = cluster.ellipses[size]
     data = all_data.xs(label, level='label')
@@ -452,17 +454,27 @@ def show_ellipses(cluster,
                         data=data,
                         method=method,
                         coords=list(coords))
-    good_indexes = ellipses.good_indices(cutoffs)
-    for idx in good_indexes:
+    if cutoffs is None:
+        good_indexes = data[data['good'] == 1].index
+    else:
+        good_indexes = ellipses.good_indices(cutoffs)
+
+    lines_dict = {}
+    for t_stamp in good_indexes:
         log.debug(
-            'Good ellipse: size {}, label {}, time stamp {}'.format(size, label, idx))
-        curve = ellipses.evaluate(idx)
+            'Good ellipse: size {}, label {}, time stamp {}'.format(size, label, t_stamp))
+        curve = ellipses.evaluate(t_stamp)
+
         if curve is None:
-            continue
-        axes[0, 0].plot(curve[:, 0], curve[:, 1], **plot_kwargs)
-        axes[0, 1].plot(curve[:, 2], curve[:, 1], **plot_kwargs)
-        axes[1, 0].plot(curve[:, 0], curve[:, 2], **plot_kwargs)
+            print('eval failed')
+            raise
+            #continue
+        l_00 = axes[0, 0].plot(curve[:, 0], curve[:, 1], **plot_kwargs)
+        l_01 = axes[0, 1].plot(curve[:, 2], curve[:, 1], **plot_kwargs)
+        l_10 = axes[1, 0].plot(curve[:, 0], curve[:, 2], **plot_kwargs)
         ax_3d.plot(curve[:, 0], curve[:, 1], curve[:, 2], **plot_kwargs)
+        for line in (l_00, l_01, l_10):
+            lines_dict[line[0]] = (size, t_stamp, label)
 
     if show_centers:
         axes[0, 0].plot(ellipses.data.loc[good_indexes]['x_ec'],
@@ -471,6 +483,8 @@ def show_ellipses(cluster,
                         ellipses.data.loc[good_indexes]['y_ec'], 'r+')
         axes[1, 0].plot(ellipses.data.loc[good_indexes]['x_ec'],
                         ellipses.data.loc[good_indexes]['z_ec'], 'r+')
+    if return_lines_dict:
+        return axes, ax_3d, lines_dict
     return axes, ax_3d
 
 def show_n_panels(cluster, thumbs, time0,

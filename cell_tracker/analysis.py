@@ -116,7 +116,7 @@ class Ellipses():
     def evaluate(self, idx, sampling=4):
 
         sub_data = self.data.loc[idx]
-        if not np.all(np.isfinite(sub_data)):
+        if not np.isfinite(sub_data['a']):
             return
 
         start, stop = sub_data[['start', 'stop']].astype(np.int)
@@ -129,6 +129,7 @@ class Ellipses():
 
             xs = rhos * np.cos(thetas) + sub_data.x0
             ys = rhos * np.sin(thetas) + sub_data.y0
+
         elif self.method == 'cartesian':
             t0 = np.int(self.segment.loc[start, 't'])
             t1 = np.int(self.segment.loc[stop, 't'])
@@ -247,6 +248,7 @@ def fit_arc_ellipse(segment, start, stop,
         log.debug('Using cartesian method')
         thetas = np.arctan2(to_fit.y, to_fit.x)
         dthetas, thetas = continuous_theta(thetas)
+        ## Need extra parameters
         omega0 = thetas.ptp() / to_fit.t.ptp()
         phi_x0 = 0
         params0.append(omega0)
@@ -314,7 +316,9 @@ def fit_arc_ellipse(segment, start, stop,
 
     ### Goodness of fit
     fvec = fit_output[2]['fvec']
-    fit_data['gof'] = -np.log(np.sum(fvec**2) / fvec.size)
+    ### TODO Needs better normalization see GH #14
+    ### by deviding by the diffusion coefficient
+    fit_data['gof'] = -np.log(np.avg(fvec**2) / fvec.size)
     ### leastq info
     fit_data['fit_ier'] = fit_output[-1]
 

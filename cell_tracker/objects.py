@@ -100,6 +100,7 @@ class CellCluster:
             if 'ellipses' in key:
                 size = np.int(key.split('_')[-1])
                 self.ellipses[size] = self.oio[key]
+        self.ellipses = pd.Panel.from_dict(self.ellipses)
 
     def get_z_stack(self, stack_num):
         """
@@ -215,10 +216,11 @@ class CellCluster:
             trajs = trajs.drop(center_label,
                                level='label',
                                inplace=False).sortlevel('t_stamp', inplace=False)
-            trajs = Trajectories(trajs)
+            self.trajs = Trajectories(trajs)
             log.info('Center trajectory dropped and wrote to HDFStore')
             self.oio['trajs_back'] = self.trajs
             self.oio[save_droped] = trajs
+
         elif not smooth:
             self.center = trajs[coords].mean(axis=0, level='t_stamp')
         else:
