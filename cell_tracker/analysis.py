@@ -318,7 +318,7 @@ def fit_arc_ellipse(segment, start, stop,
     fvec = fit_output[2]['fvec']
     ### TODO Needs better normalization see GH #14
     ### by deviding by the diffusion coefficient
-    fit_data['gof'] = -np.log(np.avg(fvec**2) / fvec.size)
+    fit_data['gof'] = -np.log(np.mean(fvec**2) / fvec.size)
     ### leastq info
     fit_data['fit_ier'] = fit_output[-1]
 
