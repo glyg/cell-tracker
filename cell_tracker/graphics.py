@@ -831,25 +831,24 @@ def center_traj_over_img(tracker, dsRed_dir, gfp_dir):
     return fig, ax
 
 def show_measure(trajs, measure, errorbar=True,
-                 show_segments=False, ax=None, **kwargs):
+                 show_segments=False, axes=None, **kwargs):
     data_cols = [col for col in measure if col != 't']
-    if ax is None:
-        fig, ax = plt.subplots()
-    else:
-        fig = ax.get_figure()
-    time = measure.t
     n_measures = len(data_cols)
-    for i, col in enumerate(data_cols):
-        if n_measures > 1:
-            sub_ax = fig.add_subplot(n_measures, 1, i+1)
-        else:
-            sub_ax = ax
+    if axes is None:
+        fig, axes = plt.subplots(n_measures)
+    else:
+        fig = axes[0].get_figure()
+    time = measure.t
+    for col, sub_ax  in zip(data_cols, axes):
         data = measure[col]
         _show_single_measure(trajs, time, data,
                              errorbar=errorbar,
                              show_segments=show_segments,
                              ax=sub_ax, **kwargs)
-    return ax
+        sub_ax.set_ylabel(col)
+    sub_ax.set_xlabel('Time')
+
+    return axes
 
 def _show_single_measure(trajs, time, data,
                          errorbar=True, show_segments=True,
