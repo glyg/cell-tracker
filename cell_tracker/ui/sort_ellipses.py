@@ -11,8 +11,6 @@ from ..graphics import show_4panel_ellipses
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sklearn.cluster import KMeans
-from sktracker.trajectories import Trajectories
 import logging
 log = logging.getLogger(__name__)
 
@@ -38,8 +36,7 @@ class EllipsisPicker:
         self.bad_ellipses = []#set()
         self.bad_lines = []
         self.overlays = [] ### Drawn above the selected ellipses
-        self.to_delete = []
-
+        self.collected = []
         self.backups = []
         self.__init_fig()
 
@@ -68,7 +65,7 @@ class EllipsisPicker:
 
 
     def show_pickable_ellipses(self):
-
+        ellipses_kwargs = {'c':'k', 'lw': 1.5, 'alpha':0.4}
 
         self.ellipses_lines = {}
         for size in self.sizes:
@@ -79,7 +76,8 @@ class EllipsisPicker:
                                                               coords=self.coords,
                                                               axes=self.axes, ax_3d=self.ax_3d,
                                                               return_lines_dict=True,
-                                                              show_centers=False)
+                                                              show_centers=False,
+                                                              **ellipses_kwargs)
             self.ellipses_lines.update(lines_dict)
 
     def __call__(self, event):
@@ -93,12 +91,12 @@ class EllipsisPicker:
             #         self.__update__()
 
             if event.key == 'pageup':#in [' ', 'right', 'up']:
+                print('pageup')
                 self.forward()
             elif event.key == 'pagedown':# in ['left', 'down']:
                 self.backward()
             elif event.key in ['x', 'X']:
                 self.remove_bad(event)
-                self.__update__()
         else:
             tb = plt.get_current_fig_manager().toolbar
             if tb.mode != '': return
@@ -108,51 +106,55 @@ class EllipsisPicker:
                 #plt.draw()
             elif event.button == 3:
                 if len(self.bad_ellipses):
-                    self.unmark_bad()
+                    self.unmark_bad(event)
 
             self.canvas.draw()
 
     def mark_bad(self, line, event):
         ### Register the data point
         idx = self.ellipses_lines[line]
-        if not idx in self.bad_ellipses:
-            self.bad_ellipses.append(idx)
+        if idx in self.bad_ellipses:
+            return
+        self.bad_ellipses.append(idx)
         ### Plots overlay
         overlay = event.inaxes.plot(line.get_data()[0],
                                     line.get_data()[1],
-                                    'ks-', mfc='None')
-        if not overlay in self.overlays:
-            self.overlays.append(overlay[0])
+                                    'k-', lw=2, alpha=0.8)
+        self.overlays.append(overlay[0])
         if not line in self.bad_lines:
             self.bad_lines.append(line)
 
-    def unmark_bad(self):
+    def unmark_bad(self, event):
+
         self.bad_ellipses.pop()
         ### Plots overlay
-        self.overlays.pop()
+        overlay = self.overlays.pop()
+        try:
+            event.inaxes.lines.remove(overlay)
+        except ValueError:
+            pass
         self.bad_lines.pop()
 
 
     def remove_bad(self, event):
-        if not len(self.bad_ellipses):
-            return
-        for s, t, l in self.bad_ellipses:
-            self.cluster.ellipses.loc[s, t, l]['good'] = 100
+        # if not len(self.bad_ellipses):
+        #     return
+        # for s, t, l in self.bad_ellipses:
+        #     self.cluster.ellipses.loc[s, t, l]['good'] = 100
         if not len(self.bad_lines):
             return
         for line in self.bad_lines:
             try:
-                line_idx = event.inaxes.lines.index(line)
-                event.inaxes.lines.pop(line_idx)
+                event.inaxes.lines.remove(line)
             except ValueError:
                 continue
         for overlay in self.overlays:
             try:
-                line_idx = event.inaxes.lines.index(overlay)
-                event.inaxes.lines.pop(line_idx)
+                event.inaxes.lines.remove(overlay)
             except ValueError:
                 continue
-
+        self.bad_lines = []
+        self.overlays = []
         plt.draw()
 
     def forward(self):
@@ -168,7 +170,7 @@ class EllipsisPicker:
             self.__update__()
 
     def __update__(self):
-        pass
+        self.show_pickable_ellipses()
         # show_4panel_ellipses(self.cluster, self.current_label,
         #                      sizes=self.sizes,  cutoffs=None,
         #                      method='polar',
@@ -185,6 +187,8 @@ class EllipsisPicker:
         min_dist = np.inf
         for line in ax.lines:
             if line in self.traj_data:
+                continue
+            elif line in self.overlays:
                 continue
             xs, ys = line.get_data()
             dx = xs - event.xdata
