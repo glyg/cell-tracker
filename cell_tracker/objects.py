@@ -95,12 +95,16 @@ class CellCluster:
 
     def _get_ellipses(self):
 
-        self.ellipses = {}
+        self.ellipses = []
         for key in self.oio.keys():
             if 'ellipses' in key:
                 size = np.int(key.split('_')[-1])
-                self.ellipses[size] = self.oio[key]
-        self.ellipses = pd.Panel.from_dict(self.ellipses)
+                _ellipses = self.oio[key]
+                _ellipses['size'] = size
+                _ellipses.set_index('size', drop=False, append=True, inplace=True)
+                _ellipses.sortlevel(level='t_stamp', inplace=True)
+                self.ellipses.append(_ellipses)
+        self.ellipses = pd.concat(self.ellipses)
 
     def get_z_stack(self, stack_num):
         """
@@ -313,28 +317,22 @@ class CellCluster:
                                   method=method,
                                   coords=coords,
                                   t_step=t_step)
-        self.ellipses[size] = _ellipses.sortlevel(level='t_stamp')
-        self.oio['ellipses_%i' %size] = self.ellipses[size]
+        _ellipses.set_index('size', drop=False, append=True, inplace=True)
+        _ellipses.sortlevel(level='t_stamp', inplace=True)
+        self.oio['ellipses_%i' %size] = _ellipses
+        return _ellipses
 
     def detect_rotations(self, cutoffs, sizes, method='binary', trajs=None):
         if trajs is None:
-            trajs = self.trajs
+        trajs = self.trajs
+        ellipses = Ellipses(size=None, data=self.ellipses)
+        ellipses.data['good'] =  np.zeros(ellipses.data.shape[0])
+        goods = ellipses.good_indices(cutoffs)
+        if len(goods):
+            ellipses.loc[goods, 'good'] = 1.
 
-        for size in sizes:
-            ellipsis_df = self.ellipses[size]
-            ellipsis = Ellipses(size, data=ellipsis_df)
-            ellipsis.data['good'] =  np.zeros(ellipsis.data.shape[0])
-            goods = ellipsis.good_indices(cutoffs)
-            if len(goods):
-                ellipsis_df.loc[goods, 'good'] = 1.
-            ellipsis_df['size'] = size
-
-        data = pd.concat([self.ellipses[size][['start', 'stop', 'gof', 'radius',
-                                               'dtheta', 'good', 'size']].astype(np.float)
-                          for size in sizes]).dropna()
-        data = data.replace([np.inf, -np.inf], np.nan).dropna()
+        data = self.ellipses[['start', 'stop', 'good', 'size']].astype(np.float).dropna()
         data.sort_index(axis=0, inplace=True)
-        data.sort_index(axis=1, inplace=True)
         detected_rotations = trajs.groupby(
             level='label', group_keys=False).apply(_get_segment_rotations, data, method)
         if detected_rotations.ndim == 2:
@@ -392,21 +390,16 @@ def _get_segment_rotations(segment, data, method):
 
     sizes = data['size'].unique()
     n_sizes = len(sizes)
-    for size in sizes:
-        at_size = sub_data[sub_data['size'] == size]
-        good = at_size[at_size['good'] == 1]
-        if good.shape[0] == 0:
-            continue
+    good = sub_data[sub_data['good'] == 1]
+    for t_stamp in good.index:
+        start = sub_data.loc[t_stamp, 'start']
+        stop = sub_data.loc[t_stamp, 'stop']
+        if method == 'score':
+            detected_rotations.loc[np.int(start): np.int(stop)] += 1. / n_sizes
+        elif method == 'binary':
+            detected_rotations.loc[np.int(start): np.int(stop)] = 1
         else:
-            for t_stamp in good.index:
-                start = sub_data[sub_data['size'] == size].loc[t_stamp, 'start']
-                stop =  sub_data[sub_data['size'] == size].loc[t_stamp, 'stop']
-                if method == 'score':
-                    detected_rotations.loc[np.int(start): np.int(stop)] += 1. / n_sizes
-                elif method == 'binary':
-                    detected_rotations.loc[np.int(start): np.int(stop)] = 1
-                else:
-                    raise ValueError('''method should be either "binary" or "score"''')
+            raise NotImplementedError('''method should be either "binary" or "score"''')
     return detected_rotations
 
 

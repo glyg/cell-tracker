@@ -29,10 +29,9 @@ class EllipsisPicker:
         self.axes = None
         self.ax_3d = None
 
-        self.labels = cluster.trajs.labels
+        self.labels = list(cluster.trajs.labels)
         self.current_label = self.labels[0]
-        self.lines = set()
-        ## self.ellipses = {} ### useless?
+        self.traj_data = set()
         self.bad_ellipses = []#set()
         self.bad_lines = []
         self.overlays = [] ### Drawn above the selected ellipses
@@ -55,9 +54,8 @@ class EllipsisPicker:
                                                   axes=self.axes, ax_3d=self.ax_3d,
                                                   coords=self.coords)
         for ax in self.axes.ravel():
-            self.lines.update(set(ax.lines))
+            self.traj_data.update(set(ax.lines))
         self.figure = self.axes[0, 0].get_figure()
-        self.traj_data = self.lines.copy()
         self.canvas = self.figure.canvas
         self.cid = self.canvas.mpl_connect('button_press_event', self)
         self.cid2 = self.canvas.mpl_connect('key_press_event', self)
@@ -69,19 +67,23 @@ class EllipsisPicker:
 
         self.ellipses_lines = {}
         for size in self.sizes:
-            self.axes, self.ax_3d, lines_dict = show_ellipses(self.cluster,
-                                                              self.current_label,
-                                                              size,
-                                                              cutoffs=None,
-                                                              coords=self.coords,
-                                                              axes=self.axes, ax_3d=self.ax_3d,
-                                                              return_lines_dict=True,
-                                                              show_centers=False,
-                                                              **ellipses_kwargs)
-            self.ellipses_lines.update(lines_dict)
+            self.axes, self.ax_3d, lines_dict, index_dict = show_ellipses(self.cluster,
+                                                                          self.current_label,
+                                                                          size,
+                                                                          cutoffs=None,
+                                                                          coords=self.coords,
+                                                                          axes=self.axes, ax_3d=self.ax_3d,
+                                                                          return_lines_dict=True,
+                                                                          show_centers=False,
+                                                                          **ellipses_kwargs)
+            self.lines_dict.update(lines_dict)
+            self.index_dict.update(index_dict)
+
+
 
     def __call__(self, event):
         self.curent_event = event
+        if event.inaxes == self.ax_3d: return
 
         if not hasattr(event, 'button'):
             log.info(event.key)
@@ -112,17 +114,21 @@ class EllipsisPicker:
 
     def mark_bad(self, line, event):
         ### Register the data point
-        idx = self.ellipses_lines[line]
+        idx = self.ellipses_lines[(event.inaxes, line)]
         if idx in self.bad_ellipses:
             return
         self.bad_ellipses.append(idx)
-        ### Plots overlay
-        overlay = event.inaxes.plot(line.get_data()[0],
-                                    line.get_data()[1],
-                                    'k-', lw=2, alpha=0.8)
-        self.overlays.append(overlay[0])
-        if not line in self.bad_lines:
-            self.bad_lines.append(line)
+        ### self.ellipses_lines has both lines and indexes  keys...
+        for ax, ell_line in self.ellipses_lines[idx]:
+            ### Plots overlay
+            overlay = event.inaxes.plot(line.get_data()[0],
+                                        line.get_data()[1],
+                                        'k-', lw=2, alpha=0.8)
+            self.overlays.append(overlay[0])
+
+            if not ell_line in self.bad_lines:
+                self.bad_lines.append(ell_line)
+
 
     def unmark_bad(self, event):
 
@@ -162,6 +168,7 @@ class EllipsisPicker:
         if self.current_label != self.labels[-1]:
             self.current_label = self.labels[self.labels.index(self.current_label)+1]
             self.__update__()
+            self.canvas.draw()
 
     def backward(self):
 
@@ -170,6 +177,16 @@ class EllipsisPicker:
             self.__update__()
 
     def __update__(self):
+        print('update')
+        for ax in self.axes.ravel():
+            ax.cla()
+        self.ax_3d.cla()
+        self.traj_data = set()
+        self.axes, self.ax_3d = draw.show_4panels(self.cluster.trajs, self.current_label,
+                                                  axes=self.axes, ax_3d=self.ax_3d,
+                                                  coords=self.coords)
+        for ax in self.axes.ravel():
+            self.traj_data.update(set(ax.lines))
         self.show_pickable_ellipses()
         # show_4panel_ellipses(self.cluster, self.current_label,
         #                      sizes=self.sizes,  cutoffs=None,

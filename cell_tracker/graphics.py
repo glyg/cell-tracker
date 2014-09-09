@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pylab as plt
 import warnings
+import itertools
 
 import logging
 log = logging.getLogger(__name__)
@@ -31,14 +32,14 @@ from .objects import build_iterator
 def _scatter_single_segment(cluster, label, sizes, color, axes=None):
 
     symbols = 'svD+^od'
-    symbols = {size: symbol for size, symbol in zip(sizes, symbols)}
+    symbols = {size: symbol for size, symbol in zip(sizes, itertools.cycle(symbols))}
 
     if axes is None:
         fig, axes = plt.subplots(2, 2, sharex='col',
                                 sharey='row', figsize=(12, 12))
 
     for size in sizes:
-        ellipsis_df = cluster.ellipses[size].xs(label, level='label').dropna()
+        ellipsis_df = cluster.ellipses.xs(size, level='size').xs(label, level='label').dropna()
         if ellipsis_df.empty:
             continue
         gof = ellipsis_df['gof'].astype(np.float)
@@ -433,7 +434,7 @@ def show_ellipses(cluster,
                   axes=None, ax_3d=None,
                   method='polar',
                   show_centers=False,
-                  return_lines_dict=False,
+                  return_dicts=False,
                   **plot_kwargs):
 
     if axes is None:
@@ -447,7 +448,7 @@ def show_ellipses(cluster,
         ax_3d = fig.add_subplot(224, projection='3d')
 
     segments = cluster.trajs.get_segments()
-    all_data = cluster.ellipses[size]
+    all_data = cluster.ellipses.xs(size, level='size')
     data = all_data.xs(label, level='label')
     ellipses = Ellipses(size=size,
                         segment=segments[label],
@@ -460,21 +461,26 @@ def show_ellipses(cluster,
         good_indexes = ellipses.good_indices(cutoffs)
 
     lines_dict = {}
+    index_dict = {}
     for t_stamp in good_indexes:
         log.debug(
             'Good ellipse: size {}, label {}, time stamp {}'.format(size, label, t_stamp))
         curve = ellipses.evaluate(t_stamp)
-
         if curve is None:
             print('eval failed')
             raise
             #continue
-        l_00 = axes[0, 0].plot(curve[:, 0], curve[:, 1], **plot_kwargs)
-        l_01 = axes[0, 1].plot(curve[:, 2], curve[:, 1], **plot_kwargs)
-        l_10 = axes[1, 0].plot(curve[:, 0], curve[:, 2], **plot_kwargs)
-        ax_3d.plot(curve[:, 0], curve[:, 1], curve[:, 2], **plot_kwargs)
-        for line in (l_00, l_01, l_10):
-            lines_dict[line[0]] = (size, t_stamp, label)
+        l_00 = axes[0, 0].plot(curve[:, 0], curve[:, 1], **plot_kwargs)[0]
+        l_01 = axes[0, 1].plot(curve[:, 2], curve[:, 1], **plot_kwargs)[0]
+        l_10 = axes[1, 0].plot(curve[:, 0], curve[:, 2], **plot_kwargs)[0]
+        l_11 = ax_3d.plot(curve[:, 0], curve[:, 1], curve[:, 2], **plot_kwargs)
+        lines = (l_00, l_01, l_10, l_11)
+        all_axes = (axes[0, 0], axes[0, 1], axes[1, 0], ax_3d)
+        ### Store the correspondance between plotted lines and corresponding indexes
+        lines_dict[(t_stamp, label, size)] = []
+        for ax, line in zip(all_axes, lines):
+            lines_dict[(ax, line)] = (t_stamp, label, size)
+            index_dict[(t_stamp, label, size)].append(ax, line)
 
     if show_centers:
         axes[0, 0].plot(ellipses.data.loc[good_indexes]['x_ec'],
@@ -483,8 +489,8 @@ def show_ellipses(cluster,
                         ellipses.data.loc[good_indexes]['y_ec'], 'r+')
         axes[1, 0].plot(ellipses.data.loc[good_indexes]['x_ec'],
                         ellipses.data.loc[good_indexes]['z_ec'], 'r+')
-    if return_lines_dict:
-        return axes, ax_3d, lines_dict
+    if return_dicts:
+        return axes, ax_3d, lines_dict, index_dict
     return axes, ax_3d
 
 def show_n_panels(cluster, thumbs, time0,

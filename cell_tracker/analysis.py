@@ -42,7 +42,7 @@ columns.extend(start_stop)
 
 class Ellipses():
 
-    def __init__(self, size=0,
+    def __init__(self, size=None,
                  cutoffs=ellipsis_cutoffs,
                  method='polar',
                  segment=None,
@@ -61,7 +61,7 @@ class Ellipses():
         else:
             self.data = pd.DataFrame(index=self.segment.index,
                                      columns=columns, dtype=np.float)
-        if not 'size' in self.data.columns:
+        if size is not None:
             self.data['size'] = self.size
 
     def do_fits(self, cutoffs):
