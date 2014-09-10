@@ -84,11 +84,6 @@ class CellCluster:
             if key not in self.metadata:
                 self.metadata[key] = val
 
-    # def interpolate(self, sampling=1, s=0, k=3, backup=True):
-    #     self.oio['raw'] = self.trajs
-    #     self.trajs = self.trajs.time_interpolate(sampling=sampling, s=s, k=k)
-
-
     @property
     def metadata(self):
         return self.oio.metadata
@@ -324,12 +319,12 @@ class CellCluster:
 
     def detect_rotations(self, cutoffs, sizes, method='binary', trajs=None):
         if trajs is None:
-        trajs = self.trajs
+            trajs = self.trajs
         ellipses = Ellipses(size=None, data=self.ellipses)
         ellipses.data['good'] =  np.zeros(ellipses.data.shape[0])
         goods = ellipses.good_indices(cutoffs)
         if len(goods):
-            ellipses.loc[goods, 'good'] = 1.
+            ellipses.data.loc[goods, 'good'] = 1.
 
         data = self.ellipses[['start', 'stop', 'good', 'size']].astype(np.float).dropna()
         data.sort_index(axis=0, inplace=True)

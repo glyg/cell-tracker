@@ -9,6 +9,7 @@ from ..graphics import show_4panel_ellipses
 
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 import logging
@@ -16,6 +17,8 @@ log = logging.getLogger(__name__)
 
 from sktracker.trajectories import draw
 from ..graphics import show_ellipses
+
+
 
 class EllipsisPicker:
     '''
@@ -65,20 +68,18 @@ class EllipsisPicker:
     def show_pickable_ellipses(self):
         ellipses_kwargs = {'c':'k', 'lw': 1.5, 'alpha':0.4}
 
-        self.ellipses_lines = {}
+        self.ellipses_lines = pd.DataFrame()
         for size in self.sizes:
-            self.axes, self.ax_3d, lines_dict, index_dict = show_ellipses(self.cluster,
-                                                                          self.current_label,
-                                                                          size,
-                                                                          cutoffs=None,
-                                                                          coords=self.coords,
-                                                                          axes=self.axes, ax_3d=self.ax_3d,
-                                                                          return_lines_dict=True,
-                                                                          show_centers=False,
-                                                                          **ellipses_kwargs)
-            self.lines_dict.update(lines_dict)
-            self.index_dict.update(index_dict)
-
+            self.axes, self.ax_3d, lines_df = show_ellipses(self.cluster,
+                                                            self.current_label,
+                                                            size,
+                                                            cutoffs=None,
+                                                            coords=self.coords,
+                                                            axes=self.axes, ax_3d=self.ax_3d,
+                                                            return_lines=True,
+                                                            show_centers=False,
+                                                            **ellipses_kwargs)
+            self.ellipses_lines.append(lines_df)
 
 
     def __call__(self, event):

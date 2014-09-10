@@ -17,8 +17,6 @@ import logging
 log = logging.getLogger(__name__)
 
 
-#from .tracking import Ellipses
-
 #draw a vector
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d, Axes3D
@@ -434,7 +432,7 @@ def show_ellipses(cluster,
                   axes=None, ax_3d=None,
                   method='polar',
                   show_centers=False,
-                  return_dicts=False,
+                  return_lines=False,
                   **plot_kwargs):
 
     if axes is None:
@@ -460,8 +458,8 @@ def show_ellipses(cluster,
     else:
         good_indexes = ellipses.good_indices(cutoffs)
 
-    lines_dict = {}
-    index_dict = {}
+    line_idx = []
+    ell_idx = []
     for t_stamp in good_indexes:
         log.debug(
             'Good ellipse: size {}, label {}, time stamp {}'.format(size, label, t_stamp))
@@ -477,10 +475,13 @@ def show_ellipses(cluster,
         lines = (l_00, l_01, l_10, l_11)
         all_axes = (axes[0, 0], axes[0, 1], axes[1, 0], ax_3d)
         ### Store the correspondance between plotted lines and corresponding indexes
-        lines_dict[(t_stamp, label, size)] = []
         for ax, line in zip(all_axes, lines):
-            lines_dict[(ax, line)] = (t_stamp, label, size)
-            index_dict[(t_stamp, label, size)].append(ax, line)
+            line_idx.append((ax, line))
+            ell_idx.append(t_stamp, label, size)
+    lines_df = pd.DataFrame(index=pd.MultiIndex(levels=[[], []],
+                                            labels=[[], []],
+                                            names=['axis', 'line']),
+                        columns=['t_stamp', 'label', 'size'])
 
     if show_centers:
         axes[0, 0].plot(ellipses.data.loc[good_indexes]['x_ec'],
@@ -489,8 +490,8 @@ def show_ellipses(cluster,
                         ellipses.data.loc[good_indexes]['y_ec'], 'r+')
         axes[1, 0].plot(ellipses.data.loc[good_indexes]['x_ec'],
                         ellipses.data.loc[good_indexes]['z_ec'], 'r+')
-    if return_dicts:
-        return axes, ax_3d, lines_dict, index_dict
+    if return_lines:
+        return axes, ax_3d, lines_df
     return axes, ax_3d
 
 def show_n_panels(cluster, thumbs, time0,
