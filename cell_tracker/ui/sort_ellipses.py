@@ -36,8 +36,6 @@ class EllipsisPicker:
         self.current_label = self.labels[0]
         self.traj_data = set()
         self.bad_ellipses = []#set()
-        self.bad_lines = []
-        self.overlays = [] ### Drawn above the selected ellipses
         self.collected = []
         self.backups = []
         self.__init_fig()
@@ -58,6 +56,7 @@ class EllipsisPicker:
                                                   coords=self.coords)
         for ax in self.axes.ravel():
             self.traj_data.update(set(ax.lines))
+        self.traj_data.update(set(self.ax_3d.lines))
         self.figure = self.axes[0, 0].get_figure()
         self.canvas = self.figure.canvas
         self.cid = self.canvas.mpl_connect('button_press_event', self)
@@ -68,7 +67,7 @@ class EllipsisPicker:
     def show_pickable_ellipses(self):
         ellipses_kwargs = {'c':'k', 'lw': 1.5, 'alpha':0.4}
 
-        self.ellipses_lines = pd.DataFrame()
+        self.ellipses_lines = []
         for size in self.sizes:
             self.axes, self.ax_3d, lines_df = show_ellipses(self.cluster,
                                                             self.current_label,
@@ -80,7 +79,7 @@ class EllipsisPicker:
                                                             show_centers=False,
                                                             **ellipses_kwargs)
             self.ellipses_lines.append(lines_df)
-
+        self.ellipses_lines = pd.concat(self.ellipses_lines).sortlevel()
 
     def __call__(self, event):
         self.curent_event = event
@@ -113,34 +112,42 @@ class EllipsisPicker:
 
             self.canvas.draw()
 
-    def mark_bad(self, line, event):
+    def mark_bad(self, close_line, event):
         ### Register the data point
-        idx = self.ellipses_lines[(event.inaxes, line)]
-        if idx in self.bad_ellipses:
+        tls = self.ellipses_lines.loc[event.inaxes, close_line] # time, label, size
+        if tls in self.bad_ellipses:
             return
-        self.bad_ellipses.append(idx)
-        ### self.ellipses_lines has both lines and indexes  keys...
-        for ax, ell_line in self.ellipses_lines[idx]:
-            ### Plots overlay
-            overlay = event.inaxes.plot(line.get_data()[0],
-                                        line.get_data()[1],
-                                        'k-', lw=2, alpha=0.8)
+        self.bad_ellipses.append(tls)
+        where = self.ellipses_lines.where(event.inaxes.ellipses_lines == tls).dropna()
+        for ax, line in where.index:
+            if ax == self.ax_3d:
+                ### Plots overlay
+                overlay = ax.plot(line.get_data()[0],
+                                  line.get_data()[1],
+                                  line.get_data()[2],
+                                  'k-', lw=2, alpha=0.8)
+            else:
+                overlay = ax.plot(line.get_data()[0],
+                                  line.get_data()[1],
+                                  'k-', lw=2, alpha=0.8)
             self.overlays.append(overlay[0])
 
-            if not ell_line in self.bad_lines:
-                self.bad_lines.append(ell_line)
-
+    def iter_axes(self):
+        axes = (self.axes[0, 0], self.axes[0, 0], self.axes[0, 0], self.ax_3d)
+        for ax in axes:
+            yield ax
 
     def unmark_bad(self, event):
 
         self.bad_ellipses.pop()
         ### Plots overlay
-        overlay = self.overlays.pop()
-        try:
-            event.inaxes.lines.remove(overlay)
-        except ValueError:
-            pass
-        self.bad_lines.pop()
+        for ax in reversed(self.iter_axes):
+            overlay = self.overlays.pop()
+            try:
+                ax.lines.remove(overlay)
+            except ValueError:
+                pass
+            self.bad_lines.pop()
 
 
     def remove_bad(self, event):

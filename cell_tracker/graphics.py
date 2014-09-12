@@ -471,17 +471,18 @@ def show_ellipses(cluster,
         l_00 = axes[0, 0].plot(curve[:, 0], curve[:, 1], **plot_kwargs)[0]
         l_01 = axes[0, 1].plot(curve[:, 2], curve[:, 1], **plot_kwargs)[0]
         l_10 = axes[1, 0].plot(curve[:, 0], curve[:, 2], **plot_kwargs)[0]
-        l_11 = ax_3d.plot(curve[:, 0], curve[:, 1], curve[:, 2], **plot_kwargs)
+        l_11 = ax_3d.plot(curve[:, 0], curve[:, 1], curve[:, 2], **plot_kwargs)[0]
         lines = (l_00, l_01, l_10, l_11)
         all_axes = (axes[0, 0], axes[0, 1], axes[1, 0], ax_3d)
         ### Store the correspondance between plotted lines and corresponding indexes
         for ax, line in zip(all_axes, lines):
             line_idx.append((ax, line))
-            ell_idx.append(t_stamp, label, size)
-    lines_df = pd.DataFrame(index=pd.MultiIndex(levels=[[], []],
-                                            labels=[[], []],
-                                            names=['axis', 'line']),
-                        columns=['t_stamp', 'label', 'size'])
+            ell_idx.append([t_stamp, label, size])
+
+    lines_df = pd.DataFrame(index=pd.MultiIndex.from_tuples(line_idx,
+                                                            names=['axis', 'line']),
+                            data=np.array(ell_idx),
+                            columns=['t_stamp', 'label', 'size'])
 
     if show_centers:
         axes[0, 0].plot(ellipses.data.loc[good_indexes]['x_ec'],

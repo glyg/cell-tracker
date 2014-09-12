@@ -99,7 +99,8 @@ class CellCluster:
                 _ellipses.set_index('size', drop=False, append=True, inplace=True)
                 _ellipses.sortlevel(level='t_stamp', inplace=True)
                 self.ellipses.append(_ellipses)
-        self.ellipses = pd.concat(self.ellipses)
+        if len(self.ellipses):
+            self.ellipses = pd.concat(self.ellipses)
 
     def get_z_stack(self, stack_num):
         """
@@ -118,7 +119,7 @@ class CellCluster:
         return z_stack
 
     def save_trajs(self, trajs_name='trajs'):
-        self.oio['trajs_name'] = self.trajs
+        self.oio[trajs_name] = self.trajs
         if hasattr(self, 'averages'):
             self.oio['averages'] = self.averages
 
@@ -191,7 +192,6 @@ class CellCluster:
         smooth : float, default 0.
             A smoothing factor. If non zero, the argument is passed
             to the `time_interpolate` method of `self.trajs`
-
         append: bool, default True
             If True, creates columns in `self.trajs` with the coordinates names
             suffixed with '_c' with the repeated  center postion and columns

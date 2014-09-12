@@ -112,7 +112,7 @@ def get_from_excel(data_path):
     ### The Trajectories class is a subclass of
     ### pandas DataFrame
     ### Parsing excel files tends to add NaNs to the data
-    trajs = Trajectories(trajs.dropna())
+    trajs = Trajectories(trajs.dropna().sortlevel())
 
     metadata = pd.read_excel(data_path, 1)
     metadata = {name: value for name, value
