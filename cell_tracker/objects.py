@@ -96,7 +96,8 @@ class CellCluster:
                 size = np.int(key.split('_')[-1])
                 _ellipses = self.oio[key]
                 _ellipses['size'] = size
-                _ellipses.set_index('size', drop=False, append=True, inplace=True)
+                if not 'size' in _ellipses.index.names:
+                    _ellipses.set_index('size', drop=False, append=True, inplace=True)
                 _ellipses.sortlevel(level='t_stamp', inplace=True)
                 self.ellipses.append(_ellipses)
         if len(self.ellipses):

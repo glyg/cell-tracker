@@ -460,6 +460,7 @@ def show_ellipses(cluster,
 
     line_idx = []
     ell_idx = []
+    lines_df = None
     for t_stamp in good_indexes:
         log.debug(
             'Good ellipse: size {}, label {}, time stamp {}'.format(size, label, t_stamp))
@@ -478,11 +479,11 @@ def show_ellipses(cluster,
         for ax, line in zip(all_axes, lines):
             line_idx.append((ax, line))
             ell_idx.append([t_stamp, label, size])
-
-    lines_df = pd.DataFrame(index=pd.MultiIndex.from_tuples(line_idx,
-                                                            names=['axis', 'line']),
-                            data=np.array(ell_idx),
-                            columns=['t_stamp', 'label', 'size'])
+    if len(line_idx):
+        lines_df = pd.DataFrame(index=pd.MultiIndex.from_tuples(line_idx,
+                                                                names=['axis', 'line']),
+                                data=np.array(ell_idx),
+                                columns=['t_stamp', 'label', 'size'])
 
     if show_centers:
         axes[0, 0].plot(ellipses.data.loc[good_indexes]['x_ec'],
