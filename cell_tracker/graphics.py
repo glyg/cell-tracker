@@ -27,9 +27,9 @@ from sktracker.trajectories import draw
 from .analysis import Ellipses
 from .objects import build_iterator
 
-def _scatter_single_segment(cluster, label, sizes, color, axes=None):
+def _scatter_single_segment(cluster, label, sizes, axes=None):
 
-    symbols = 'svD+^od'
+    symbols = 'soDd'
     symbols = {size: symbol for size, symbol in zip(sizes, itertools.cycle(symbols))}
 
     if axes is None:
@@ -38,6 +38,7 @@ def _scatter_single_segment(cluster, label, sizes, color, axes=None):
 
     for size in sizes:
         ellipsis_df = cluster.ellipses.xs(size, level='size').xs(label, level='label').dropna()
+        color = ellipsis_df.good
         if ellipsis_df.empty:
             continue
         gof = ellipsis_df['gof'].astype(np.float)
@@ -50,17 +51,17 @@ def _scatter_single_segment(cluster, label, sizes, color, axes=None):
 
         axes[0, 0].scatter(gof, ellipticities,
                            c=color, marker=symbols[size],
-                           alpha=0.5, s=rad_size)
+                           alpha=0.5, s=rad_size, cmap='Reds')
         #axes[0, 0].plot([gof.min(), cutoffs['gof']
         axes[1, 0].scatter(gof, radius,
                            c=color, marker=symbols[size],
-                           s= 50 / ellipticities , alpha=0.5)
+                           s= 50 / ellipticities , alpha=0.5, cmap='Reds')
         axes[0, 1].scatter(np.abs(dtheta), ellipticities,
                            c=color, marker=symbols[size],
-                           alpha=0.5, s=gof_size)
+                           alpha=0.5, s=gof_size, cmap='Reds')
         axes[1, 1].scatter(np.abs(dtheta), radius,
                            c=color, marker=symbols[size],
-                           alpha=0.5, s=gof_size)
+                           alpha=0.5, s=gof_size, cmap='Reds')
 
 
 
@@ -69,10 +70,9 @@ def show_ellipses_clusters(cluster, sizes, cutoffs, axes=None):
         fig, axes = plt.subplots(2, 2, sharex='col',
                                  sharey='row', figsize=(12, 12))
 
-    colors = cluster.trajs.get_colors()
+    color = cluster.trajs.get_colors()
     for label in cluster.trajs.labels:
-        color = colors[label]
-        _scatter_single_segment(cluster, label, sizes, color, axes=axes)
+        _scatter_single_segment(cluster, label, sizes, axes=axes)
     ### goodness of fit vs ellipticity
 
     ax = axes[0, 0]

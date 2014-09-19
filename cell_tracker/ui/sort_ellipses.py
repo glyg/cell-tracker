@@ -17,11 +17,27 @@ log = logging.getLogger(__name__)
 from sktracker.trajectories import draw
 from ..graphics import show_ellipses
 
+
+'''
+In this module, we set up an interactive tool to remove false positives from detected ellipses
+'''
+
+
 class EllipsisPicker:
     '''
     '''
     def __init__(self, cluster, sizes, coords=['x', 'y', 'z']):
+        '''
+        Creates a matplotlib graph with added interactions to select and suppres
+        fitted ellipses
 
+        Parameters:
+        -----------
+
+        cluster: a :class:`cell_tracker.Cluster` instance
+        sizes
+
+        '''
         self.cluster = cluster
         self.sizes = sizes
         self.coords = coords
