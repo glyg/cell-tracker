@@ -17,19 +17,19 @@ import sys, os
 from PyQt4 import QtGui
 from .. import io
 
-def get_cluster(default_path='.'):
+def get_cluster(default_path='.', extra_sheet=None):
 
     tiff_exts = ['.tiff', '.tif', '.TIFF', '.TIF']
     valid_exts = tiff_exts + ['.h5', '.xlsx']
     ext_filter  = ' '.join(['*{}'.format(ext) for ext in valid_exts])
 
-    data_path, name = get_dataset(default_path, ext_filter)
+    data_path, name = get_dataset(default_path, ext_filter, extra_sheet)
     if data_path is None:
         return
     cellcluster = io.get_cluster(data_path)
     return cellcluster
 
-def get_multiple_clusters(default_path):
+def get_multiple_clusters(default_path, extra_sheet=None):
 
     valid_exts = ['.h5', '.xlsx']
     ext_filter  = ' '.join(['*{}'.format(ext) for ext in valid_exts])
@@ -38,7 +38,7 @@ def get_multiple_clusters(default_path):
     if data_paths is None or not len(data_paths):
         return
     if len(data_paths) == 1 and data_paths[0].endswith('.xlsx'):
-        cellclusters = io.load_multiple_excel(data_paths[0])
+        cellclusters = io.load_multiple_excel(data_paths[0], extra_sheet)
     else:
         cellclusters = {}
         for data_path in data_paths:
@@ -51,7 +51,7 @@ def get_multiple_clusters(default_path):
             cellclusters[name] = cluster
     return cellclusters
 
-def get_datasets(default='.', ext_filter='*.*'):
+def get_datasets(default='.', ext_filter='*.*', extra_sheet=None):
     '''
     Opens a directory select dialog
     '''
@@ -68,7 +68,7 @@ def get_datasets(default='.', ext_filter='*.*'):
     print('\n'.join(data_paths))
     return data_paths
 
-def get_dataset(default='.', ext_filter='*.*'):
+def get_dataset(default='.', ext_filter='*.*', extra_sheet=None):
     '''
     Opens a directory select dialog
     '''

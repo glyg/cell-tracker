@@ -92,7 +92,7 @@ class CellCluster:
 
         self.ellipses = []
         for key in self.oio.keys():
-            if 'ellipses' in key:
+            if 'ellipses_' in key:
                 size = np.int(key.split('_')[-1])
                 _ellipses = self.oio[key]
                 _ellipses['size'] = size

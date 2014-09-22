@@ -22,7 +22,7 @@ from .objects import CellCluster
 from .conf import default_metadata
 
 
-def get_cluster(data_path,  metadata=None, single_file=False):
+def get_cluster(data_path,  metadata=None, single_file=False, extra_sheet=None):
     '''
     This opens a file dialog allowing to select the directory for
     the tracked data, and returns a :class:`CellCluster` object.
@@ -53,7 +53,7 @@ def get_cluster(data_path,  metadata=None, single_file=False):
 
     ## Excel
     elif data_path.endswith('.xlsx'):
-        cellcluster = get_from_excel(data_path)
+        cellcluster = get_from_excel(data_path, extra_sheet)
         return cellcluster
 
     ## Tiff File
@@ -79,7 +79,7 @@ def get_cluster(data_path,  metadata=None, single_file=False):
     return cellcluster
 
 
-def get_from_excel(data_path):
+def get_from_excel(data_path, extra_sheet=None):
     '''
     This opens a file dialog allowing ot select an excel file containing
     the tracked data, and returns a :class:`CellCluster` object.
@@ -136,7 +136,7 @@ def get_from_excel(data_path):
     return cellcluster
 
 
-def load_multiple_excel(data_path):
+def load_multiple_excel(data_path, extra_sheet=None):
 
     xlsx_file = pd.io.excel.ExcelFile(data_path)
 
