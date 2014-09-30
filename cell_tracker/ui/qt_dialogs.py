@@ -38,12 +38,12 @@ def get_multiple_clusters(default_path, extra_sheet=None):
     if data_paths is None or not len(data_paths):
         return
     if len(data_paths) == 1 and data_paths[0].endswith('.xlsx'):
-        cellclusters = io.load_multiple_excel(data_paths[0], extra_sheet)
+        cellclusters = io.load_multiple_excel(data_paths[0])
     else:
         cellclusters = {}
         for data_path in data_paths:
             try:
-                cluster = io.get_cluster(data_path)
+                cluster = io.get_cluster(data_path, extra_sheet=extra_sheet)
             except:
                 print('Loading Failed for cluster from {}'.format(data_path))
                 continue
@@ -86,9 +86,6 @@ def get_dataset(default='.', ext_filter='*.*', extra_sheet=None):
 
     print('Choosen data path: %s' % data_path)
     return data_path, name
-
-
-
 
 def get_excel_file(default='.'):
     '''

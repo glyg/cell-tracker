@@ -113,13 +113,11 @@ def get_from_excel(data_path, extra_sheet=None):
     ### pandas DataFrame
     ### Parsing excel files tends to add NaNs to the data
     trajs = Trajectories(trajs.dropna().sortlevel())
-
     metadata = pd.read_excel(data_path, 1)
     metadata = {name: value for name, value
                 in zip(metadata['Name'], metadata['Value'])}
 
-    metadata['FileName'] = os.path.join(
-        os.path.dirname(data_path), metadata['FileName'])
+    metadata['FileName'] = data_path
     store_path = metadata['FileName']
     if '.' in store_path[-6:]:
         store_path = ''.join(store_path.split('.')[:-1]+['.h5'])
@@ -133,6 +131,13 @@ def get_from_excel(data_path, extra_sheet=None):
     cellcluster = CellCluster(objectsio=objectsio)
     cellcluster.trajs = trajs
     cellcluster.oio['trajs'] = trajs
+    if extra_sheet is not None:
+        try:
+            extra = pd.read_excel(data_path, extra_sheet)
+            cellcluster.extra = extra
+            cellcluster.oio['extra'] = extra
+        except:
+            print('Extra data from sheet {} not found in the file {}'.format(extra_sheet, data_path))
     return cellcluster
 
 
