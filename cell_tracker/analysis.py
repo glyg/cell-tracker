@@ -220,7 +220,7 @@ def fit_arc_ellipse(segment, start, stop,
 
     pca = PCA()
     sub_segment = segment.loc[start:stop].dropna()
-    if sub_segment.shape[0] < 6:
+    if sub_segment.shape[0] < 8:
         log.debug('''Not enough points to fit an ellipsis''')
         if return_rotated:
             return None, None, None
@@ -318,7 +318,12 @@ def fit_arc_ellipse(segment, start, stop,
     fvec = fit_output[2]['fvec']
     ### TODO Needs better normalization see GH #14
     ### by deviding by the diffusion coefficient
-    fit_data['gof'] = -np.log(np.mean(fvec**2) / fvec.size)
+    ### Number of degrees of freedom
+    dof = fvec.size - len(params) - 1
+
+    if dof == 0:
+        fit_data['gof'] = np.nan
+    fit_data['gof'] = -np.log(np.mean(fvec**2) / dof)
     ### leastq info
     fit_data['fit_ier'] = fit_output[-1]
 

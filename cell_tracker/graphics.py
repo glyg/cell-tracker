@@ -38,7 +38,11 @@ def _scatter_single_segment(cluster, label, sizes, axes=None):
 
     for size in sizes:
         ellipsis_df = cluster.ellipses.xs(size, level='size').xs(label, level='label').dropna()
-        color = ellipsis_df.good
+        if 'color' in ellipsis_df.columns:
+            color = ellipsis_df['color']
+        else:
+            color = 'k'
+
         if ellipsis_df.empty:
             continue
         gof = ellipsis_df['gof'].astype(np.float)
@@ -51,17 +55,17 @@ def _scatter_single_segment(cluster, label, sizes, axes=None):
 
         axes[0, 0].scatter(gof, ellipticities,
                            c=color, marker=symbols[size],
-                           alpha=0.5, s=rad_size, cmap='Reds')
+                           alpha=0.5, s=rad_size)
         #axes[0, 0].plot([gof.min(), cutoffs['gof']
         axes[1, 0].scatter(gof, radius,
                            c=color, marker=symbols[size],
-                           s= 50 / ellipticities , alpha=0.5, cmap='Reds')
+                           s= 50 / ellipticities , alpha=0.5)
         axes[0, 1].scatter(np.abs(dtheta), ellipticities,
                            c=color, marker=symbols[size],
-                           alpha=0.5, s=gof_size, cmap='Reds')
+                           alpha=0.5, s=gof_size)
         axes[1, 1].scatter(np.abs(dtheta), radius,
                            c=color, marker=symbols[size],
-                           alpha=0.5, s=gof_size, cmap='Reds')
+                           alpha=0.5, s=gof_size)
 
 
 
@@ -393,22 +397,24 @@ def plot_rotation_events(cluster, ax=None,
     return ax, total_rot, n_detected
 
 
-def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
+def show_4panel_ellipses(cluster, trajs,
+                         label, sizes,  cutoffs,
                          method='polar',
                          scatter_kw={}, line_kw={},
                          ellipsis_kw={},
                          show_centers=False,
                          savefile=None, axes=None, ax_3d=None):
 
-    coords=['x_r', 'y_r', 'z_r']
+    coords=['x', 'y', 'z']
 
-    axes, ax_3d = draw.show_4panels(cluster.trajs, label,
+    axes, ax_3d = draw.show_4panels(trajs, label,
                                     axes=axes, ax_3d=ax_3d,
                                     scatter_kw=scatter_kw,
                                     line_kw=line_kw,
                                     coords=coords)
     for size in sizes:
-        axes, ax_3d = show_ellipses(cluster, label, size,
+        axes, ax_3d = show_ellipses(cluster, trajs,
+                                    label, size,
                                     cutoffs=cutoffs,
                                     coords=coords,
                                     axes=axes, ax_3d=ax_3d,
@@ -425,7 +431,7 @@ def show_4panel_ellipses(cluster, label, sizes,  cutoffs,
     return axes, ax_3d
 
 
-def show_ellipses(cluster,
+def show_ellipses(cluster, trajs,
                   label, size,
                   cutoffs=None,
                   coords=['x_r', 'y_r', 'z_r'],
@@ -445,7 +451,7 @@ def show_ellipses(cluster,
         axes[1, 1].axis('off')
         ax_3d = fig.add_subplot(224, projection='3d')
 
-    segments = cluster.trajs.get_segments()
+    segments = trajs.get_segments()
     all_data = cluster.ellipses.xs(size, level='size')
     data = all_data.xs(label, level='label')
     ellipses = Ellipses(size=size,
@@ -463,7 +469,9 @@ def show_ellipses(cluster,
     lines_df = None
     for t_stamp in good_indexes:
         log.debug(
-            'Good ellipse: size {}, label {}, time stamp {}'.format(size, label, t_stamp))
+            'Good ellipse: size {}, label {}, time stamp {}'.format(size,
+                                                                    label,
+                                                                    t_stamp))
         curve = ellipses.evaluate(t_stamp)
         if curve is None:
             print('eval failed')

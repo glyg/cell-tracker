@@ -26,7 +26,7 @@ def get_cluster(default_path='.', extra_sheet=None):
     data_path, name = get_dataset(default_path, ext_filter, extra_sheet)
     if data_path is None:
         return
-    cellcluster = io.get_cluster(data_path)
+    cellcluster = io.get_cluster(data_path, extra_sheet=extra_sheet)
     return cellcluster
 
 def get_multiple_clusters(default_path, extra_sheet=None):

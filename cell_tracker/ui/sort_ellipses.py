@@ -66,8 +66,10 @@ class EllipsisPicker:
         self.axes[1, 1].axis('off')
         self.ax_3d = self.figure.add_subplot(224, projection='3d')
 
-        self.axes, self.ax_3d = draw.show_4panels(self.cluster.trajs, self.current_label,
-                                                  axes=self.axes, ax_3d=self.ax_3d,
+        self.axes, self.ax_3d = draw.show_4panels(self.cluster.trajs,
+                                                  self.current_label,
+                                                  axes=self.axes,
+                                                  ax_3d=self.ax_3d,
                                                   coords=self.coords)
         for ax in self.axes.ravel():
             self.traj_data.update(set(ax.lines))
@@ -85,16 +87,22 @@ class EllipsisPicker:
         self.ellipses_lines = []
         for size in self.sizes:
             self.axes, self.ax_3d, lines_df = show_ellipses(self.cluster,
+                                                            self.cluster.trajs,
                                                             self.current_label,
                                                             size,
                                                             cutoffs=None,
                                                             coords=self.coords,
-                                                            axes=self.axes, ax_3d=self.ax_3d,
+                                                            axes=self.axes,
+                                                            ax_3d=self.ax_3d,
                                                             return_lines=True,
                                                             show_centers=False,
                                                             **ellipses_kwargs)
-            self.ellipses_lines.append(lines_df)
-        self.ellipses_lines = pd.concat(self.ellipses_lines).sortlevel()
+            if lines_df is not None:
+                self.ellipses_lines.append(lines_df)
+        if len(self.ellipses_lines):
+            self.ellipses_lines = pd.concat(self.ellipses_lines).sortlevel()
+        else:
+            print('No ellipses found')
         self.axes[0,0].set_title(self.current_label)
         plt.draw()
 
@@ -104,14 +112,12 @@ class EllipsisPicker:
         if event.inaxes == self.ax_3d: return
         if not hasattr(event, 'button'):
             log.info(event.key)
-            print(event.key)
             # if event.key == 'ctrl+z':
             #     if len(self.backups):
             #         self.cluster.trajs = self.backups[-1]
             #         self.__update__()
 
             if event.key in ['pageup', 'ctr+right', 'alt+f']:#in [' ', 'right', 'up']:
-                print('forward + {}'.format(event.key))
                 self.forward()
             elif event.key in ['pagedown', 'ctr+left', 'alt+b']:# in ['left', 'down']:
                 print('backward + {}'.format(event.key))
@@ -198,7 +204,7 @@ class EllipsisPicker:
             self.current_label = self.labels[self.labels.index(self.current_label)+1]
             self.__update__()
         else:
-            self.axes[0, 0].set_title('No more label before')
+            print('No more label after this one')
 
     def backward(self):
 
@@ -206,7 +212,7 @@ class EllipsisPicker:
             self.current_label = self.labels[self.labels.index(self.current_label)-1]
             self.__update__()
         else:
-            self.axes[0, 0].set_title('No more label after')
+            print('No more label before this one')
 
     def __update__(self):
         print('update')
